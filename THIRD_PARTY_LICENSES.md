@@ -18,6 +18,10 @@ alongside. Keep it current whenever a dependency, model, or bundled tool changes
 | msgpack | Apache-2.0 | wordfreq dependency |
 | regex | Apache-2.0 AND CNRI-Python | wordfreq dependency |
 | wcwidth | MIT | ftfy dependency |
+| pypdfium2 | Apache-2.0 OR BSD-3-Clause | reads and renders PDFs (replaces poppler since M5) |
+| PDFium (inside the pypdfium2 wheel) | BSD-3-Clause / Apache-2.0 | Google's PDF engine; its bundled libraries (FreeType, libjpeg-turbo, libpng, zlib, OpenJPEG, Little CMS, ICU, abseil, ...) are permissive; full list in the wheel's `BUILD_LICENSES/` |
+| Pillow | MIT-CMU (HPND) | page images; wheels bundle libjpeg-turbo, libpng, libtiff, libwebp, libavif, FreeType, HarfBuzz, Little CMS, OpenJPEG, zlib-ng, Brotli, libxcb (all permissive) |
+| numpy | BSD-3-Clause | in-process preprocessing (replaces unpaper since M5); Linux wheels bundle OpenBLAS (BSD-3-Clause) and libgfortran (GPL-3.0 with the GCC Runtime Library Exception, which permits redistribution in any program) |
 
 ## Default engine (optional extra `rebind[docling]`)
 
@@ -33,6 +37,14 @@ Docling may also use other OCR back-ends if installed (EasyOCR: Apache-2.0;
 ocrmac: MIT, uses Apple Vision; Tesseract: Apache-2.0). Their transitive
 dependencies are recorded in `uv.lock`.
 
+**Bundled native code to watch:** rapidocr depends on `opencv-python-headless`
+(Apache-2.0). Its wheels bundle FFmpeg, which is LGPL-2.1+, and the macOS arm64
+wheel (5.0.0.93) ships an FFmpeg built with `--enable-gpl` (x264, x265; its
+`libavcodec` reports "GPL version 3 or later"). rebind's own code does not use
+OpenCV. Installing it next to rebind (CLI, Docker) is aggregation, but it must
+not go into the desktop or mobile app bundles as is (PLAN.md §2);
+`scripts/check_licenses.py --app` fails on it.
+
 ## CUDA image only
 
 The NVIDIA image is based on `nvidia/cuda` and installs PyTorch's CUDA wheels,
@@ -44,17 +56,19 @@ of the CPU image or of `pip install rebind`. `triton` (MIT) is also included.
 
 ## External command-line tools (invoked as separate processes, not linked)
 
-These are not Python dependencies. They will be installed in the Docker images
-(M3), which ship them as separate programs alongside rebind (aggregation).
+These are not Python dependencies. The Docker images ship pandoc, EPUBCheck
+and a JRE as separate programs alongside rebind (aggregation). None of them may
+go into the desktop or mobile app bundles if GPL (PLAN.md §2).
 
-| Tool | License |
-|---|---|
-| poppler-utils (pdfinfo, pdfimages, pdftotext, pdftoppm) | GPL-2.0-or-later |
-| unpaper | GPL-2.0 |
-| pandoc | GPL-2.0-or-later |
-| EPUBCheck (5.x via Homebrew, 4.2.6 in the Debian/Ubuntu images) | BSD-3-Clause |
-| OpenJDK runtime (for EPUBCheck) | GPL-2.0 with Classpath Exception |
-| Calibre `ebook-convert` (optional, not bundled) | GPL-3.0 |
+| Tool | License | Status |
+|---|---|---|
+| pandoc | GPL-2.0-or-later | required: builds the EPUB |
+| EPUBCheck (5.x via Homebrew, 4.2.6 in the Debian/Ubuntu images) | BSD-3-Clause | optional: validates the EPUB; skipped with a note when missing |
+| OpenJDK runtime (for EPUBCheck) | GPL-2.0 with Classpath Exception | optional |
+| unpaper | GPL-2.0 | optional preprocess backend (`preprocess.backend = "unpaper"`); not installed in the images since M5 |
+| Calibre `ebook-convert` | GPL-3.0 | optional AZW3 output, not bundled |
+
+poppler-utils (GPL) was used up to 0.1.0 and is no longer needed.
 
 ## Never bundled
 

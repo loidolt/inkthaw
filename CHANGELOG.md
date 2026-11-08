@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased (M5: fewer external tools)
+
+### Changed
+
+- PDFs are read and rendered in-process with PDFium (`pypdfium2`); poppler
+  (`pdfinfo`, `pdfimages`, `pdftotext`, `pdftoppm`) is no longer needed.
+- New built-in preprocess backend (numpy + Pillow): dark-border removal,
+  despeckle, deskew, masking/centring of the text area, and slight
+  anti-aliasing of glyph edges. It is the default; unpaper stays available with
+  `preprocess.backend = "unpaper"`. The old `preprocess.unpaper = false` still
+  works and means `backend = "none"`.
+- EPUBCheck is optional: without it (or without a working Java runtime) the
+  EPUB is still built and the report says validation was skipped.
+  `validate.require_epubcheck = true` restores the old hard requirement.
+- `rebind doctor` lists the built-in libraries; only pandoc is a required
+  external tool. The Docker images no longer install poppler or unpaper.
+- The ingest, rasterize, preprocess and validate stage versions changed, so
+  existing jobs re-run from ingest once (OCR results stay cached per page
+  image where the image is unchanged).
+
+### Added
+
+- Draft PyPI publishing job (`release.yml`, off until a trusted publisher is
+  configured) and a draft Homebrew formula in `packaging/homebrew/`.
+- `scripts/check_licenses.py --app` fails on wheels that bundle copyleft
+  native libraries (currently `opencv-python-headless`, via RapidOCR).
+
 ## 0.1.0 (2026-11-08)
 
 First release.

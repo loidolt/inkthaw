@@ -26,11 +26,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: External tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            poppler-utils unpaper pandoc epubcheck default-jre-headless
+      # No external tools: unit tests (including ingest -> rasterize ->
+      # preprocess on a synthetic PDF) must pass with nothing but Python wheels.
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
@@ -45,11 +42,14 @@ jobs:
       REBIND_MODELS_DIR: ${{ github.workspace }}/.models
     steps:
       - uses: actions/checkout@v4
+      # pandoc builds the EPUB; EPUBCheck (+ Java) is optional but CI insists
+      # on it below. poppler and unpaper are deliberately not installed.
       - name: External tools
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            poppler-utils unpaper pandoc epubcheck default-jre-headless
+            pandoc epubcheck default-jre-headless
+          ! command -v pdftoppm && ! command -v unpaper
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
@@ -64,6 +64,29 @@ jobs:
       - run: uv run rebind models
       - run: uv run python scripts/check_licenses.py
       - run: uv run pytest -m integration -v
+        env:
+          REBIND_REQUIRE_EPUBCHECK: "1"
+
+  # The built wheel alone (no apt/brew packages) must ingest, render and clean
+  # pages on Linux and macOS: what `uvx rebind` / `pipx install rebind` get.
+  wheel:
+    needs: unit
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv build
+      - name: Run from the wheel with no external tools
+        run: |
+          whl=$(ls dist/rebind-*.whl)
+          uvx --isolated --from "$whl" rebind --version
+          uvx --isolated --from "$whl" rebind run tests/fixtures/jekyll-5p.pdf \
+            --to preprocess --jobs-dir "$RUNNER_TEMP/jobs"
+          ls "$RUNNER_TEMP/jobs/jekyll-5p/20_clean"
 
   docker:
     runs-on: ubuntu-24.04

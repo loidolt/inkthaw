@@ -23,8 +23,14 @@ color = "gray"             # gray | color
 split_spreads = true
 spread_min_aspect = 1.1
 spread_order = "ltr"       # ltr | rtl
-unpaper = true
-unpaper_args = ["--no-grayfilter"]
+backend = "builtin"        # builtin | unpaper (needs the unpaper binary) | none
+remove_borders = true      # builtin: wipe dark scanner borders
+despeckle = 4              # builtin: max speck size in pixels (0 = off)
+mask_content = true        # builtin: wipe outside the text area and centre it
+soften = true              # builtin: anti-alias hard glyph edges (helps OCR)
+deskew = true              # builtin
+deskew_max_angle = 2.0     # builtin: degrees
+# unpaper_args = ["--no-grayfilter"]   # backend = "unpaper" only
 
 [ocr]
 # languages = ["en"]       # default: metadata.language
@@ -45,5 +51,6 @@ split_level = 1
 # css = "extra.css"
 
 [validate]
-epubcheck = true
+epubcheck = true           # run EPUBCheck when it and Java are found, else skip with a note
+require_epubcheck = false  # true: fail when EPUBCheck is missing
 fail_on_error = true

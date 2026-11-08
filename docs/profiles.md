@@ -67,13 +67,19 @@ PDF's own metadata, then to the first heading or the file name.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `raster_mode` | `render` | `render` with pdftoppm, or `extract` the embedded scan image when a page is exactly one image |
+| `raster_mode` | `render` | `render` the page with PDFium, or `extract` the embedded scan image when a page is exactly one image |
 | `color` | `gray` | `gray` or `color` page images (the cover is always in color) |
 | `split_spreads` | `true` | Split two-page spreads |
 | `spread_min_aspect` | `1.1` | Width/height above which a page counts as a spread |
 | `spread_order` | `ltr` | `rtl` for right-to-left books |
-| `unpaper` | `true` | Deskew, remove dark borders, despeckle |
-| `unpaper_args` | `["--no-grayfilter"]` | Extra unpaper flags; the gray filter damages text on gray-paper scans |
+| `backend` | `builtin` | Page clean-up: `builtin` (in-process, no external tool), `unpaper` (needs the unpaper binary), or `none` |
+| `remove_borders` | `true` | builtin: wipe dark regions touching the page edge (scanner borders, the facing page, binding shadow) |
+| `despeckle` | `4` | builtin: remove isolated dark clusters of up to this many pixels; `0` turns it off |
+| `mask_content` | `true` | builtin: white out everything outside the main text area and centre it on the page (unpaper's mask and centring) |
+| `soften` | `true` | builtin: slightly anti-alias hard glyph edges (bicubic quarter-pixel resample); RapidOCR misreads fewer lines on bitonal scans |
+| `deskew` | `true` | builtin: straighten skewed pages |
+| `deskew_max_angle` | `2.0` | builtin: largest skew (degrees) searched for |
+| `unpaper_args` | `["--no-grayfilter"]` | Extra unpaper flags (`backend = "unpaper"`); the gray filter damages text on gray-paper scans |
 | `workers` | CPU count | Parallel page workers |
 
 ### `[ocr]`
@@ -110,7 +116,10 @@ when no cover image is given), `azw3` (also write AZW3; needs Calibre).
 
 ### `[validate]` and `[quality]`
 
-`validate.epubcheck` and `validate.fail_on_error` control EPUBCheck.
+`validate.epubcheck` runs EPUBCheck when it and a Java runtime are found;
+otherwise the EPUB is still written and the report says validation was
+skipped. `validate.require_epubcheck = true` makes a missing EPUBCheck an
+error instead, and `validate.fail_on_error` fails the job on EPUBCheck errors.
 `[quality]` sets the report's thresholds: `low_confidence` (0.80),
 `min_dictionary_ratio` (0.85), `char_count_low` / `char_count_high` (0.5 / 1.6
 of the median page), `unbalanced_tolerance` (1).

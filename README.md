@@ -43,7 +43,7 @@ number are gone; "reput-able" and "de-meanour" are rejoined while "down-going"
 keeps its hyphen; quotes are curled and the old spacing before `:` and `;` is
 removed. The chapter becomes an EPUB chapter, and the title lines are kept as
 front matter. Not everything is this clean: on the full book the text is about
-98.3% accurate by character ([benchmarks](docs/benchmarks.md)), and the report
+98.2% accurate by character ([benchmarks](docs/benchmarks.md)), and the report
 lists the pages that need a look.
 
 ## Run with Docker
@@ -84,23 +84,48 @@ docker compose run --rm rebind run /data/inbox/book.pdf --out /data/outbox --job
 
 ## Requirements (without Docker)
 
-- Python 3.12 and [uv](https://docs.astral.sh/uv/)
-- External tools: poppler-utils, unpaper, pandoc (≥ 3.0), epubcheck, and a
-  Java runtime
+- Python 3.12 or newer. PDF rendering (PDFium, via `pypdfium2`) and page
+  clean-up (deskew, border removal, despeckle) run inside rebind, so poppler
+  and unpaper are no longer needed.
+- [pandoc](https://pandoc.org/) ≥ 3.0 to build the EPUB.
+- Optional: [EPUBCheck](https://www.w3.org/publishing/epubcheck/) and a Java
+  runtime. When they are missing, the EPUB is still built and the report says
+  that validation was skipped.
+- Optional: unpaper, as an alternative preprocess backend
+  (`preprocess.backend = "unpaper"`).
 
 macOS (Homebrew):
 
 ```bash
-brew install poppler unpaper pandoc epubcheck
+brew install pandoc epubcheck
 ```
 
 Debian / Ubuntu:
 
 ```bash
-sudo apt install poppler-utils unpaper pandoc epubcheck default-jre-headless
+sudo apt install pandoc epubcheck default-jre-headless
 ```
 
+On a Mac, run rebind natively rather than in Docker: Docling then uses the
+GPU (MPS), about twice as fast as the CPU-only container.
+
 ## Install and check
+
+From PyPI (once published; see the [changelog](CHANGELOG.md)), with
+[uv](https://docs.astral.sh/uv/) or pipx:
+
+```bash
+uvx --from 'rebind[docling]' rebind run book.pdf
+```
+
+```bash
+pipx install 'rebind[docling]'
+```
+
+On Linux, PyPI's torch wheel is the CUDA build (about 2.5 GB); the Docker CPU
+image is the smaller option there.
+
+From a checkout:
 
 ```bash
 uv sync --extra docling
@@ -110,7 +135,8 @@ uv sync --extra docling
 uv run rebind doctor
 ```
 
-`doctor` lists each external tool with its version and says what is missing.
+`doctor` lists the built-in PDF and image libraries and each external tool
+with its version, and says what is missing.
 `rebind engines` lists OCR engines and the devices they can use (CUDA, MPS,
 CPU). By default model weights are downloaded into the engines' own caches on
 first use; to keep them in one folder (and run offline afterwards), set
@@ -139,7 +165,7 @@ jobs/<slug>/
   manifest.json        input hash, config snapshot, stage status, timings, tool versions
   00_source/           input.pdf, info.json (page geometry, scan DPI, text-layer check)
   10_pages/            rendered page images (spreads split), cover.png
-  20_clean/            unpaper-cleaned page images
+  20_clean/            cleaned page images (deskewed, borders and specks removed)
   30_ir/raw.json       BookIR straight from the engine (+ per-page cache)
   40_ir/clean.json     BookIR after cleanup (+ changes.json)
   50_build/            book.md, metadata.yaml, book.epub

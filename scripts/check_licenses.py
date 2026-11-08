@@ -3,7 +3,12 @@
 Enforces PLAN.md §2 for everything `uv sync` installs (run it after installing
 the extras you ship). Packages verified by hand are listed in REVIEWED.
 
-    uv run python scripts/check_licenses.py [--all]
+A package's own license is not the whole story for binary wheels: some bundle
+native libraries under other terms. Those are listed in BUNDLES_COPYLEFT and
+reported as warnings; `--app` (for desktop/mobile app bundles, where nothing
+GPL may ship) turns them into failures.
+
+    uv run python scripts/check_licenses.py [--all] [--app]
 """
 
 from __future__ import annotations
@@ -25,6 +30,17 @@ BLOCKED = re.compile(
 REVIEWED: dict[str, str] = {
     "locate": "MIT (LICENSE file); PyPI classifier wrongly says Other/Proprietary",
     "rebind": "Apache-2.0 (this project)",
+}
+
+# Permissively licensed wheels that bundle copyleft native libraries. Fine to
+# install alongside rebind (CLI, Docker), but not inside app bundles (PLAN.md §2).
+BUNDLES_COPYLEFT: dict[str, str] = {
+    "opencv-python-headless": (
+        "Apache-2.0, but bundles FFmpeg (LGPL-2.1+; the macOS arm64 5.0.0.93 wheel's "
+        "libavcodec reports GPL-3.0+, built with x264/x265). Pulled in by rapidocr "
+        "(docling extra); not used by rebind's own code."
+    ),
+    "opencv-python": "Apache-2.0, but bundles FFmpeg and Qt (LGPL).",
 }
 
 # NVIDIA CUDA runtime wheels pulled in by CUDA torch builds (CUDA image only):
@@ -51,10 +67,14 @@ def license_of(dist) -> str:
 
 def main() -> int:
     show_all = "--all" in sys.argv
+    app = "--app" in sys.argv
     problems = []
+    bundled = []
     for dist in sorted(distributions(), key=lambda d: d.metadata["Name"].lower()):
         name = dist.metadata["Name"].lower().replace("_", "-")
         lic = license_of(dist)
+        if name in BUNDLES_COPYLEFT:
+            bundled.append((name, dist.version, BUNDLES_COPYLEFT[name]))
         if name in REVIEWED:
             verdict = f"ok (reviewed: {REVIEWED[name]})"
         elif NVIDIA.match(name):
@@ -66,6 +86,11 @@ def main() -> int:
             verdict = "ok"
         if show_all or verdict == "PROBLEM":
             print(f"{verdict:8s} {name} {dist.version}: {lic or 'unknown'}")
+    for name, version, note in bundled:
+        level = "PROBLEM" if app else "warning"
+        print(f"{level:8s} {name} {version}: {note}")
+    if app and bundled:
+        problems += bundled
     if problems:
         print(f"\n{len(problems)} package(s) need review (PLAN.md §2).", file=sys.stderr)
         return 1

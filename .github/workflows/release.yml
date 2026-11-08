@@ -71,3 +71,33 @@ jobs:
             Docker images:
             - CPU (amd64, arm64): `ghcr.io/${{ github.repository }}:${{ github.ref_name }}`
             - NVIDIA GPU (amd64): `ghcr.io/${{ github.repository }}:${{ github.ref_name }}-cuda`
+
+  # DRAFT (M5): publish the sdist and wheel to PyPI with trusted publishing, so
+  # `uvx --from 'rebind[docling]' rebind`, `pipx install 'rebind[docling]'` and
+  # the Homebrew formula (packaging/homebrew/) work. Off until someone
+  #   1. adds a (pending) trusted publisher on pypi.org for project "rebind",
+  #      this repository, workflow "release.yml" and environment "pypi", and
+  #   2. sets the repository variable PYPI_PUBLISH to "true".
+  pypi:
+    if: vars.PYPI_PUBLISH == 'true'
+    runs-on: ubuntu-24.04
+    needs: release
+    environment:
+      name: pypi
+      url: https://pypi.org/p/rebind
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv build
+      - name: Tag matches the package version
+        run: test "v$(uv version --short)" = "$GITHUB_REF_NAME"
+      - name: Wheel installs and runs without external tools
+        run: |
+          whl=$(ls dist/rebind-*.whl)
+          uvx --isolated --from "$whl" rebind --version
+          uvx --isolated --from "$whl" rebind run tests/fixtures/jekyll-5p.pdf \
+            --to preprocess --jobs-dir "$RUNNER_TEMP/jobs"
+      - uses: pypa/gh-action-pypi-publish@release/v1

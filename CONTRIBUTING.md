@@ -6,8 +6,10 @@ that they keep the project freely licensable.
 
 ## Setup
 
-You need Python 3.12, [uv](https://docs.astral.sh/uv/), and the external
-tools listed in the README (poppler, unpaper, pandoc ≥ 3, EPUBCheck, Java).
+You need Python 3.12, [uv](https://docs.astral.sh/uv/) and pandoc ≥ 3.
+EPUBCheck with a Java runtime is optional but recommended (CI runs it), and
+unpaper only matters if you work on the `unpaper` preprocess backend. PDF
+rendering and the default page clean-up are Python dependencies.
 
 ```bash
 uv sync --all-extras
@@ -93,7 +95,10 @@ history has examples of both.
   checksums only; never commit large scans.
 - New dependencies: ask first in an issue, and check the license against
   PLAN.md §2. Bundled code and model weights must be permissively licensed;
-  GPL tools may only be invoked as separate programs.
+  GPL tools may only be invoked as separate programs. Check the native
+  libraries inside binary wheels too, not only the package's own license:
+  `opencv-python-headless` is Apache-2.0 but bundles FFmpeg
+  (`scripts/check_licenses.py --app` lists such packages).
   `uv run python scripts/check_licenses.py` must pass, and
   `THIRD_PARTY_LICENSES.md` must be updated.
 - rebind is for books you own or that are in the public domain.
