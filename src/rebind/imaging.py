@@ -1,7 +1,7 @@
 """Tiny stdlib-only image helpers (PNG size, PNM -> PNG).
 
-unpaper reads PNG but always writes PNM; engines want PNG. Converting here keeps
-the core free of an imaging dependency.
+`png_size` reads just the PNG header, which is cheaper than opening the image
+with Pillow. The unpaper backend writes only PNM; `pnm_to_png` converts it.
 """
 
 from __future__ import annotations

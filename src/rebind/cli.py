@@ -10,6 +10,7 @@ from typing import Annotated, Any
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from rebind import __version__, tools
@@ -220,7 +221,9 @@ def report(
         return
     data = json.loads(job.report_json.read_text(encoding="utf-8"))
     chk = data.get("epubcheck")
-    if chk:
+    if chk and chk.get("skipped"):
+        console.print(f"[yellow]epubcheck skipped:[/] {escape(str(chk.get('reason')))}")
+    elif chk:
         console.print(
             f"epubcheck {chk.get('checker_version')}: "
             f"{chk['errors']} errors, {chk['warnings']} warnings"
@@ -290,37 +293,61 @@ def engines() -> None:
                     for k in ("tables", "pictures", "footnotes", "page_furniture", "confidence")
                     if getattr(caps, k)
                 )
-            table.add_row(name, eng.version, "[green]ok[/]" if ok else f"[red]{reason}[/]", capstr)
+            status = "[green]ok[/]" if ok else f"[red]{escape(reason)}[/]"
+            table.add_row(name, eng.version, status, capstr)
         except Exception as e:
-            table.add_row(name, "?", f"[red]load error: {e}[/]", "")
+            table.add_row(name, "?", f"[red]load error: {escape(str(e))}[/]", "")
     console.print(table)
     console.print(f"devices: {', '.join(available_devices())}")
 
 
 @app.command()
 def doctor() -> None:
-    """Check external tools and engines."""
+    """Check libraries, external tools and engines."""
+    from rebind import pdf
+
+    missing_required: list[str] = []
+
+    libs = Table(title="built in (Python packages)")
+    for col in ("library", "version", "used for"):
+        libs.add_column(col)
+    v = pdf.versions()
+    import numpy
+    import PIL
+
+    libs.add_row("pypdfium2", v["pypdfium2"], "read and render PDFs")
+    libs.add_row("PDFium", v["pdfium"], "")
+    libs.add_row("Pillow", PIL.__version__, "page images")
+    libs.add_row("numpy", numpy.__version__, "preprocess: borders, despeckle, deskew")
+    console.print(libs)
+
     table = Table(title="external tools")
     for col in ("tool", "status", "version", "used for"):
         table.add_column(col)
-    missing_required = []
     for t in tools.TOOLS.values():
         path = tools.which(t.name)
+        hint = f"[dim]({escape(t.install_hint)})[/]"
         if path:
             status = "[green]ok[/]"
             ver = tools.version(t.name) or "?"
             if t.name == "pandoc" and ver.split(".")[0].isdigit() and int(ver.split(".")[0]) < 3:
                 status = "[red]too old (need >= 3.0)[/]"
                 missing_required.append(t.name)
+            elif t.name == "java" and not tools.java_works():
+                status = f"[yellow]not working (optional)[/] {hint}"
+                ver = ""
         else:
             ver = ""
             if t.required:
-                status = f"[red]missing[/] [dim]({t.install_hint})[/]"
+                status = f"[red]missing[/] {hint}"
                 missing_required.append(t.name)
             else:
-                status = f"[yellow]missing (optional)[/] [dim]({t.install_hint})[/]"
+                status = f"[yellow]missing (optional)[/] {hint}"
         table.add_row(t.name, status, ver, t.purpose)
     console.print(table)
+    _, epubcheck_missing = tools.epubcheck_status()
+    if epubcheck_missing:
+        console.print(f"[yellow]note:[/] {epubcheck_missing}; EPUBs will not be validated")
 
     from rebind.engines import list_engines
 
@@ -332,7 +359,7 @@ def doctor() -> None:
             ok, reason = False, str(e)
         eng_ok = eng_ok or ok
         mark = "[green]ok[/]" if ok else "[red]unavailable[/]"
-        console.print(f"engine {name}: {mark} [dim]{reason}[/]")
+        console.print(f"engine {name}: {mark} [dim]{escape(reason)}[/]")
     if not eng_ok:
         missing_required.append("engine")
 

@@ -9,7 +9,7 @@ import tomllib
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from rebind.errors import RebindError
 
@@ -34,20 +34,50 @@ class MetadataConfig(_Section):
 
 class PreprocessConfig(_Section):
     raster_mode: Literal["render", "extract"] = "render"
-    """'render' rasterizes with pdftoppm; 'extract' pulls the embedded scan image
-    when a page is a single full-page image (falls back to render otherwise)."""
+    """'render' rasterizes the page with PDFium; 'extract' pulls the embedded scan
+    image when a page is a single full-page image (falls back to render otherwise)."""
     color: Literal["gray", "color"] = "gray"
     split_spreads: bool = True
     spread_min_aspect: float = 1.1
     """width/height above which a page is treated as a two-page spread."""
     spread_order: Literal["ltr", "rtl"] = "ltr"
-    unpaper: bool = True
+    backend: Literal["builtin", "unpaper", "none"] = "builtin"
+    """Page clean-up: 'builtin' (in-process: borders, despeckle, deskew; no external
+    tool), 'unpaper' (needs the unpaper binary, GPL, installed separately), or
+    'none' (pass the rendered pages through)."""
+    remove_borders: bool = True
+    """builtin: wipe dark regions connected to the page edge (scanner borders,
+    the facing page, binding shadow)."""
+    despeckle: int = Field(default=4, ge=0)
+    """builtin: remove isolated dark clusters of up to this many pixels (0 = off)."""
+    mask_content: bool = True
+    """builtin: white out everything outside the main text area and centre it on
+    the page (like unpaper's mask and centring; Docling splits fewer paragraphs)."""
+    soften: bool = True
+    """builtin: slightly anti-alias hard glyph edges (bicubic sub-pixel resample);
+    RapidOCR garbles fewer lines on bitonal scans (docs/benchmarks.md)."""
+    deskew: bool = True
+    deskew_max_angle: float = Field(default=2.0, ge=0, le=15)
+    """builtin: largest skew in degrees that is searched for and corrected."""
     unpaper_args: list[str] = Field(default_factory=lambda: ["--no-grayfilter"])
-    """Extra unpaper flags. unpaper's gray filter whitens patches between text
-    lines on gray-paper scans, which garbles OCR, so it is off by default."""
+    """Extra unpaper flags (backend = "unpaper"). unpaper's gray filter whitens
+    patches between text lines on gray-paper scans, which garbles OCR, so it is
+    off by default."""
     binarize: bool = False
     workers: int | None = None
     """Parallel page workers for rasterize/preprocess. None = CPU count."""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _legacy_unpaper_switch(cls, data: Any) -> Any:
+        # rebind <= 0.1 had `unpaper = true|false`. false meant "no clean-up";
+        # true is now the built-in backend, which needs no external tool.
+        if isinstance(data, dict) and "unpaper" in data:
+            data = dict(data)
+            enabled = data.pop("unpaper")
+            if enabled is False and "backend" not in data:
+                data["backend"] = "none"
+        return data
 
 
 class OcrConfig(_Section):
@@ -118,6 +148,10 @@ class BuildConfig(_Section):
 
 class ValidateConfig(_Section):
     epubcheck: bool = True
+    """Run EPUBCheck when it (and Java) can be found; otherwise the report says
+    validation was skipped."""
+    require_epubcheck: bool = False
+    """Fail the job instead of skipping when EPUBCheck or Java is missing."""
     fail_on_error: bool = True
 
 

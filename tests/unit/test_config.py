@@ -120,3 +120,13 @@ def test_models_dir_from_environment(tmp_path: Path, monkeypatch: pytest.MonkeyP
     assert load_config(search_dir=tmp_path).models_dir == tmp_path / "m"
     explicit = load_config(overrides={"models_dir": tmp_path / "x"}, search_dir=tmp_path)
     assert explicit.models_dir == tmp_path / "x"
+
+
+def test_legacy_unpaper_switch() -> None:
+    from rebind.config import Config
+
+    assert Config.model_validate({"preprocess": {"unpaper": False}}).preprocess.backend == "none"
+    assert Config.model_validate({"preprocess": {"unpaper": True}}).preprocess.backend == "builtin"
+    cfg = Config.model_validate({"preprocess": {"unpaper": True, "backend": "unpaper"}})
+    assert cfg.preprocess.backend == "unpaper"
+    assert Config().preprocess.backend == "builtin"

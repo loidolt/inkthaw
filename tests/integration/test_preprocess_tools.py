@@ -1,10 +1,15 @@
-"""ingest -> rasterize -> preprocess on a synthetic PDF (needs poppler + unpaper, no engine)."""
+"""ingest -> rasterize -> preprocess on a synthetic PDF, no engine.
+
+The default path needs no external tool at all (PDFium and the built-in
+preprocess backend run in-process), so it runs with an empty PATH.
+"""
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
+import pytest
 from conftest import need_tools
 from pdfgen import PageSpec, gray_image, write_pdf
 from rich.console import Console
@@ -35,13 +40,19 @@ def make_pdf(path: Path) -> None:
     )
 
 
-@need_tools("pdfinfo", "pdfimages", "pdftotext", "pdftoppm", "unpaper")
-def test_ingest_rasterize_preprocess(tmp_path: Path) -> None:
+def _run(tmp_path: Path, cfg: Config):
     pdf = tmp_path / "synthetic.pdf"
     make_pdf(pdf)
     job = Job(tmp_path / "jobs" / "synthetic")
-    cfg = Config(dpi=100)
     ctx = run_pipeline(job, cfg, input_pdf=pdf, to_stage="preprocess", console=Console(quiet=True))
+    return job, ctx
+
+
+def test_ingest_rasterize_preprocess(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    empty = tmp_path / "emptybin"
+    empty.mkdir()
+    monkeypatch.setenv("PATH", str(empty))
+    job, ctx = _run(tmp_path, Config(dpi=100))
 
     info = json.loads(job.source_info.read_text())
     assert info["page_count"] == 2
@@ -62,4 +73,17 @@ def test_ingest_rasterize_preprocess(tmp_path: Path) -> None:
         path = job.abs(page.image_path)
         assert path.parent == job.dir("preprocess")
         assert png_size(path) == (page.width, page.height)
+    assert not list(job.dir("preprocess").glob("*.pgm"))
+    assert all("preprocess" in p.attrs for p in clean)  # builtin backend stats
+
+
+@need_tools("unpaper")
+def test_unpaper_backend(tmp_path: Path) -> None:
+    job, _ = _run(
+        tmp_path, Config.model_validate({"dpi": 100, "preprocess": {"backend": "unpaper"}})
+    )
+    clean = read_pages(job.dir("preprocess") / "pages.json")
+    assert len(clean) == 3
+    for page in clean:
+        assert png_size(job.abs(page.image_path)) == (page.width, page.height)
     assert not list(job.dir("preprocess").glob("*.pgm"))
