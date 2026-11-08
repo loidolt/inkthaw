@@ -36,7 +36,7 @@ def test_cli_profile_beats_file_profile(tmp_path: Path) -> None:
     (tmp_path / "rebind.toml").write_text('profile = "academic"\n')
     cfg = load_config(overrides={"profile": "novel"}, search_dir=tmp_path)
     assert cfg.profile == "novel"
-    assert cfg.build.toc_depth == 2
+    assert cfg.build.toc_depth == 1  # novel preset
 
 
 def test_none_overrides_are_ignored(tmp_path: Path) -> None:
@@ -93,3 +93,30 @@ def test_deep_merge() -> None:
         "a": {"b": 1, "c": 3},
         "d": 4,
     }
+
+
+@pytest.mark.parametrize("profile", sorted(PROFILES))
+def test_to_toml_round_trips(profile: str, tmp_path: Path) -> None:
+    from rebind.config import to_toml
+
+    cfg = load_config(overrides={"profile": profile}, search_dir=tmp_path)
+    path = tmp_path / "rebind.toml"
+    path.write_text(to_toml(cfg))
+    assert load_config(path) == cfg
+
+
+def test_profiles_differ_and_are_documented() -> None:
+    from rebind.config import PROFILE_HELP
+
+    assert set(PROFILE_HELP) == set(PROFILES)
+    dumps = {
+        p: load_config(overrides={"profile": p}).model_dump(exclude={"profile"}) for p in PROFILES
+    }
+    assert len({repr(d) for d in dumps.values()}) == len(PROFILES)
+
+
+def test_models_dir_from_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("REBIND_MODELS_DIR", str(tmp_path / "m"))
+    assert load_config(search_dir=tmp_path).models_dir == tmp_path / "m"
+    explicit = load_config(overrides={"models_dir": tmp_path / "x"}, search_dir=tmp_path)
+    assert explicit.models_dir == tmp_path / "x"

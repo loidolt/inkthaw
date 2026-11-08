@@ -463,3 +463,30 @@ def test_front_matter_ignores_late_body_start() -> None:
     blocks.append(blk(K.PARAGRAPH, PROSE, 30, 1))
     _out, changes = mark_front_matter(book(blocks, 31), Config())
     assert changes == []
+
+
+def test_find_marker_ocr_variants() -> None:
+    assert find_marker("ropes and precipices?”96 He was", "96", []) == (22, 24)
+    assert find_marker("indignation and contempt 97 Notwithstanding", "97", []) == (25, 27)
+    assert find_marker("in 1 case", "1", []) is None  # single digits need to be glued on
+
+
+def test_footnote_prefers_marker_on_its_own_page() -> None:
+    ir = book(
+        [
+            blk(K.PARAGRAPH, "First page claim* goes on", 0, 0),
+            blk(K.FOOTNOTE, "* Note for page zero.", 0, 1),
+            blk(K.PARAGRAPH, "and on the next page another claim* here.", 1, 0),
+            blk(K.FOOTNOTE, "* Note for page one.", 1, 1),
+        ]
+    )
+    merged, _ = merge_paragraphs(ir, Config())
+    assert merged.blocks[0].attrs["page_offsets"] == [[0, 0], [26, 1]]
+    out, _ = link_footnotes(merged, Config())
+    text = out.blocks[0].text
+    first, second = text.index("*"), text.rindex("*")
+    refs = out.blocks[0].attrs["noterefs"]
+    assert [(r["start"], r["note"]) for r in refs] == [
+        (first, "p0-1-footnote"),
+        (second, "p1-1-footnote"),
+    ]

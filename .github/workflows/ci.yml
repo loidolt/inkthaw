@@ -62,6 +62,7 @@ jobs:
       - run: uv sync --locked --extra docling
       - run: uv run rebind doctor
       - run: uv run rebind models
+      - run: uv run python scripts/check_licenses.py
       - run: uv run pytest -m integration -v
 
   docker:
@@ -80,3 +81,5 @@ jobs:
           cache-to: type=gha,mode=max,scope=ci-cpu
       - name: Smoke test
         run: docker run --rm rebind:cpu doctor
+      - name: Licenses in the image
+        run: docker run --rm -i --entrypoint python rebind:cpu - < scripts/check_licenses.py

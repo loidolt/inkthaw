@@ -33,6 +33,15 @@ Docling may also use other OCR back-ends if installed (EasyOCR: Apache-2.0;
 ocrmac: MIT, uses Apple Vision; Tesseract: Apache-2.0). Their transitive
 dependencies are recorded in `uv.lock`.
 
+## CUDA image only
+
+The NVIDIA image is based on `nvidia/cuda` and installs PyTorch's CUDA wheels,
+which bring NVIDIA's CUDA runtime libraries (`nvidia-*` packages, e.g. cuBLAS,
+cuDNN). These are proprietary but redistributable under the
+[NVIDIA CUDA EULA](https://docs.nvidia.com/cuda/eula/) and the NVIDIA
+Deep Learning Container license that covers the base image. They are not part
+of the CPU image or of `pip install rebind`. `triton` (MIT) is also included.
+
 ## External command-line tools (invoked as separate processes, not linked)
 
 These are not Python dependencies. They will be installed in the Docker images
@@ -43,7 +52,7 @@ These are not Python dependencies. They will be installed in the Docker images
 | poppler-utils (pdfinfo, pdfimages, pdftotext, pdftoppm) | GPL-2.0-or-later |
 | unpaper | GPL-2.0 |
 | pandoc | GPL-2.0-or-later |
-| EPUBCheck | BSD-3-Clause |
+| EPUBCheck (5.x via Homebrew, 4.2.6 in the Debian/Ubuntu images) | BSD-3-Clause |
 | OpenJDK runtime (for EPUBCheck) | GPL-2.0 with Classpath Exception |
 | Calibre `ebook-convert` (optional, not bundled) | GPL-3.0 |
 

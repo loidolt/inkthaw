@@ -33,24 +33,55 @@ def split_marker(text: str) -> tuple[str, str] | None:
     return marker, text[m.end() :]
 
 
-def find_marker(text: str, marker: str, taken: list[tuple[int, int]]) -> tuple[int, int] | None:
-    """Locate a note reference in prose. Returns (start, end) or None."""
+def find_marker(
+    text: str,
+    marker: str,
+    taken: list[tuple[int, int]],
+    window: tuple[int, int] | None = None,
+) -> tuple[int, int] | None:
+    """Locate a note reference in prose. Returns (start, end) or None.
+
+    Patterns are tried from most to least specific. With `window`, matches
+    inside it (the part of the paragraph on the note's page) are preferred.
+    """
     if marker.isdigit():
         num = re.escape(marker)
-        after = r"(?=[\s.,;:!?)]|$)"
+        after = r"(?=[\s.,;:!?)*]|$)"
         patterns = [
             re.escape(marker.translate(_TO_SUPER)),
             # digit glued to a word ("word2 ") or to punctuation after a word ("end.2")
             rf"(?<=[^\W\d_]){num}{after}",
             rf"(?<=[^\W\d_][.,;:!?”’\")\]]){num}{after}",
+            # after closing punctuation pairs: 'precipices?”96'
+            rf"(?<=[.,;:!?][”’\")\]]){num}{after}",
         ]
+        if len(marker) >= 2:
+            # OCR sometimes spaces the reference off: 'contempt 97 Notwithstanding'.
+            patterns.append(rf"(?<=[^\W\d_] ){num}(?=\s|$)")
+            patterns.append(rf"(?<=[^\W\d_][.,;:] ){num}(?=\s|$)")
     else:
         patterns = [re.escape(marker)]
-    for pat in patterns:
-        for m in re.finditer(pat, text):
-            span = (m.start(), m.end())
-            if not any(s < span[1] and span[0] < e for s, e in taken):
-                return span
+    ranges = [window, None] if window else [None]
+    for rng in ranges:
+        for pat in patterns:
+            for m in re.finditer(pat, text):
+                span = (m.start(), m.end())
+                if rng and not (rng[0] <= span[0] < rng[1]):
+                    continue
+                if not any(s < span[1] and span[0] < e for s, e in taken):
+                    return span
+    return None
+
+
+def page_window(block: Block, page: int) -> tuple[int, int] | None:
+    """Character range of `block.text` that came from `page` (merged paragraphs)."""
+    offsets = block.attrs.get("page_offsets")
+    if not offsets:
+        return None
+    for i, (start, pg) in enumerate(offsets):
+        if pg == page:
+            end = offsets[i + 1][0] if i + 1 < len(offsets) else len(block.text)
+            return (start, end)
     return None
 
 
@@ -87,7 +118,7 @@ def link_footnotes(ir: BookIR, cfg: Config) -> tuple[BookIR, list[Change]]:
             if p.kind not in _PROSE or not _on_page(p, f.page):
                 continue
             taken = [(r["start"], r["end"]) for r in refs.get(pi, [])]
-            span = find_marker(p.text, marker, taken)
+            span = find_marker(p.text, marker, taken, page_window(p, f.page))
             if span:
                 found = (pi, span)
                 break

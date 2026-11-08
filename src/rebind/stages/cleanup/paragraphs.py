@@ -45,10 +45,19 @@ def merge_paragraphs(ir: BookIR, cfg: Config) -> tuple[BookIR, list[Change]]:
                 text = joined if joined is not None else f"{a.text.rstrip()} {b.text.lstrip()}"
                 pages = sorted({*a.attrs.get("pages", [a.page]), b.page})
                 merged_from = [*a.attrs.get("merged_from", []), b.id]
+                # Where each page's text starts inside the merged paragraph, so
+                # later rules (footnotes) can tell which page a passage is on.
+                b_start = max(0, len(text) - len(b.text.lstrip()))
+                offsets = [*a.attrs.get("page_offsets", [[0, a.page]]), [b_start, b.page]]
                 out[last] = a.model_copy(
                     update={
                         "text": text,
-                        "attrs": {**a.attrs, "pages": pages, "merged_from": merged_from},
+                        "attrs": {
+                            **a.attrs,
+                            "pages": pages,
+                            "merged_from": merged_from,
+                            "page_offsets": offsets,
+                        },
                     }
                 )
                 changes.append(

@@ -66,8 +66,6 @@ class OcrConfig(_Section):
     otherwise not detected at all (docs/benchmarks.md)."""
     tables: bool = True
     pictures: bool = True
-    page_batch: int = 1
-    """Reserved for engines that can batch pages."""
 
 
 class CleanupConfig(_Section):
@@ -153,19 +151,76 @@ class Config(_Section):
 
 # Profiles are partial configs layered between defaults and the user's file.
 PROFILES: dict[str, dict[str, Any]] = {
+    # Fiction and other running prose: chapters only in the TOC, no tables.
     "novel": {
         "ocr": {"tables": False},
         "cleanup": {"footnotes": False},
+        "build": {"toc_depth": 1},
     },
-    "nonfiction": {},
+    # General nonfiction: footnotes, the odd table or figure, sections in the TOC.
+    "nonfiction": {
+        "ocr": {"tables": True, "pictures": True},
+        "cleanup": {"footnotes": True},
+        "build": {"toc_depth": 2},
+    },
+    # Scholarly books: deep TOC, tables, footnotes; technical vocabulary and
+    # formulas lower the dictionary ratio, so that flag is relaxed.
     "academic": {
         "ocr": {"tables": True, "pictures": True},
+        "cleanup": {"footnotes": True},
         "build": {"toc_depth": 3},
+        "quality": {"min_dictionary_ratio": 0.75, "unbalanced_tolerance": 2},
     },
+    # Two text columns per page (encyclopedias, journals, some editions).
+    # Reading-order repair already leaves side-by-side blocks alone, and
+    # paragraphs are merged across column breaks.
     "two-column": {
-        "ocr": {"tables": True},
+        "ocr": {"tables": True, "pictures": True},
+        "cleanup": {"footnotes": True},
+        "build": {"toc_depth": 2},
+        "quality": {"char_count_high": 2.0},
     },
 }
+
+PROFILE_HELP: dict[str, str] = {
+    "novel": "fiction and running prose: no tables or footnote linking, chapters-only TOC",
+    "nonfiction": "footnotes, tables and figures, two-level TOC",
+    "academic": "footnotes, tables, three-level TOC, relaxed dictionary checks",
+    "two-column": "two text columns per page; footnotes and tables on",
+}
+
+
+def _toml_value(v: Any) -> str:
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, int | float):
+        return repr(v)
+    if isinstance(v, str):
+        return '"' + v.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    if isinstance(v, list):
+        return "[" + ", ".join(_toml_value(x) for x in v) + "]"
+    if isinstance(v, dict):
+        return "{ " + ", ".join(f'"{k}" = {_toml_value(x)}' for k, x in v.items()) + " }"
+    raise TypeError(f"cannot write {type(v).__name__} as TOML")
+
+
+def to_toml(cfg: Config) -> str:
+    """The effective configuration as a rebind.toml (unset values commented out)."""
+    data = cfg.model_dump(mode="json", by_alias=True)
+    lines: list[str] = []
+    tables: list[tuple[str, dict[str, Any]]] = []
+    for key, value in data.items():
+        if isinstance(value, dict):
+            tables.append((key, value))
+        elif value is None:
+            lines.append(f"# {key} =")
+        else:
+            lines.append(f"{key} = {_toml_value(value)}")
+    for name, table in tables:
+        lines.append(f"\n[{name}]")
+        for key, value in table.items():
+            lines.append(f"# {key} =" if value is None else f"{key} = {_toml_value(value)}")
+    return "\n".join(lines) + "\n"
 
 
 def deep_merge(base: dict[str, Any], over: dict[str, Any]) -> dict[str, Any]:

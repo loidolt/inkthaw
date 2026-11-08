@@ -11,9 +11,10 @@ Every stage writes its own folder inside `jobs/<slug>/`, so runs are
 resumable and every intermediate file can be inspected. See [PLAN.md](PLAN.md)
 for the design and roadmap.
 
-> **Status: early development (M3).** Scan in, valid EPUB 3 out, with
-> cleanup rules, a quality report that points at the pages worth checking, and
-> a Docker watch-folder service. First tagged release is milestone M4.
+> **Status: 0.1.0, alpha.** Scan in, valid EPUB 3 out, with cleanup rules,
+> a quality report that points at the pages worth checking, and a Docker
+> watch-folder service. See the [changelog](CHANGELOG.md) for what works and
+> what doesn't yet.
 
 ## Before and after
 
@@ -188,9 +189,28 @@ uv run rebind report jobs/<slug> --open
 ## Configuration
 
 Settings come from, in increasing priority: built-in defaults, the profile
-preset (`novel`, `nonfiction`, `academic`, `two-column`), `rebind.toml` in the
-current directory (or `--config`), and CLI flags. See
-[rebind.example.toml](rebind.example.toml) for every option.
+preset, `rebind.toml` in the current directory (or `--config`), and CLI flags.
+
+```bash
+uv run rebind run book.pdf --profile nonfiction
+```
+
+| Profile | For |
+|---|---|
+| `novel` (default) | fiction and other running prose |
+| `nonfiction` | footnotes, tables and figures |
+| `academic` | as nonfiction, deeper TOC, relaxed checks for jargon and formulas |
+| `two-column` | two text columns per page |
+
+`uv run rebind config --profile academic` prints the complete effective
+configuration as a `rebind.toml` you can save and edit.
+
+## Documentation
+
+- [Profiles and configuration](docs/profiles.md)
+- [Engines and BookIR](docs/engines.md), [writing an engine](docs/writing-an-engine.md)
+- [Benchmarks](docs/benchmarks.md)
+- [Contributing](CONTRIBUTING.md), [design and roadmap](PLAN.md), [changelog](CHANGELOG.md)
 
 ## Development
 

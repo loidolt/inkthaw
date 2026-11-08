@@ -240,6 +240,35 @@ def report(
         webbrowser.open(html_path.as_uri())
 
 
+@app.command("config")
+def show_config(
+    config: Annotated[
+        Path | None, typer.Option("--config", "-c", help="Config file (default: ./rebind.toml).")
+    ] = None,
+    profile: Annotated[str | None, typer.Option(help="Profile to apply.")] = None,
+) -> None:
+    """Print the effective configuration as TOML (defaults < profile < file)."""
+    from rebind.config import to_toml
+
+    try:
+        cfg = load_config(config, {"profile": profile})
+    except RebindError as e:
+        raise _fail(str(e)) from None
+    typer.echo(to_toml(cfg), nl=False)
+
+
+@app.command()
+def profiles() -> None:
+    """List the built-in profiles and what each one changes."""
+    from rebind.config import PROFILE_HELP
+
+    for name, overrides in PROFILES.items():
+        console.print(f"[bold]{name}[/]: {PROFILE_HELP.get(name, '')}")
+        for section, values in overrides.items():
+            for key, value in values.items():
+                console.print(f"  [dim]{section}.{key} = {value!r}[/]")
+
+
 @app.command()
 def engines() -> None:
     """List installed engines and available devices."""

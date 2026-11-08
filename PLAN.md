@@ -342,3 +342,21 @@ Decisions made while building, recorded so the plan stays the source of truth.
   the development machine); the release workflow builds it.
 - **Image size:** about 2.6 GB uncompressed for the CPU image, mostly torch
   (690 MB), transformers, scipy and the JRE.
+
+### M4 decisions
+
+- **Profiles** now differ in more than one switch: `novel` has a chapters-only
+  TOC; `nonfiction`, `academic` and `two-column` turn on footnote linking and
+  tables; `academic` relaxes the dictionary-based flags; `two-column` relaxes
+  the "too much text" flag. `rebind profiles` lists them and `rebind config`
+  prints the merged settings as TOML (round-trip tested).
+- **Footnotes on real data:** a 12-page Gibbon excerpt (numbered notes plus
+  editor's `*` notes) linked 27 of 36 notes after two fixes: references right
+  after a closing quote or spaced off by OCR are found, and paragraphs merged
+  across pages record `page_offsets`, so a note looks for its marker on its
+  own page first. The remaining 9 have OCR-damaged markers and are reported.
+- **License guard:** `scripts/check_licenses.py` runs in CI against the
+  installed packages and inside the CPU image.
+- **Removed** the unused `ocr.page_batch` option.
+- **Release:** version 0.1.0, tag `v0.1.0`. Pushing the tag runs
+  `release.yml` (GHCR images and a GitHub release).
