@@ -1,11 +1,11 @@
-from rebind.config import Config
-from rebind.engines.docling_engine import classify
-from rebind.ir import Block, BlockKind, BookIR
-from rebind.stages.build import resolve_metadata
-from rebind.stages.cleanup import apply_rules
-from rebind.stages.cleanup.furniture import drop_furniture
-from rebind.stages.rasterize import plan_pages
-from rebind.stages.validate import parse_epubcheck
+from inkthaw.config import Config
+from inkthaw.engines.docling_engine import classify
+from inkthaw.ir import Block, BlockKind, BookIR
+from inkthaw.stages.build import resolve_metadata
+from inkthaw.stages.cleanup import apply_rules
+from inkthaw.stages.cleanup.furniture import drop_furniture
+from inkthaw.stages.rasterize import plan_pages
+from inkthaw.stages.validate import parse_epubcheck
 
 
 def _sp(n: int, w: float, h: float, rotate: int = 0) -> dict:

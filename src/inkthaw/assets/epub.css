@@ -1,0 +1,114 @@
+/* inkthaw default EPUB stylesheet. Kept minimal so reading systems' own
+   typography settings (font, size, margins) stay in the reader's control. */
+
+@namespace epub "http://www.idpf.org/2007/ops";
+
+body {
+  margin: 0;
+  padding: 0;
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+p {
+  margin: 0;
+  text-indent: 1.5em;
+  orphans: 2;
+  widows: 2;
+}
+
+h1 + p, h2 + p, h3 + p, h4 + p, h5 + p, h6 + p,
+p:first-child,
+div + p, figure + p, table + p, hr + p {
+  text-indent: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  text-align: center;
+  font-weight: normal;
+  hyphens: none;
+  -webkit-hyphens: none;
+  page-break-after: avoid;
+  break-after: avoid;
+  margin: 1.5em 0 1em;
+}
+
+h1 { font-size: 1.6em; margin-top: 3em; }
+h2 { font-size: 1.3em; }
+h3 { font-size: 1.15em; }
+
+figure {
+  margin: 1em 0;
+  text-align: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+figcaption, div.caption {
+  font-size: 0.9em;
+  font-style: italic;
+  text-align: center;
+  margin: 0.5em 0 1em;
+}
+
+div.footnote-text {
+  font-size: 0.85em;
+  margin: 0.5em 0;
+}
+
+div.footnote-text p, div.caption p {
+  text-indent: 0;
+}
+
+table {
+  border-collapse: collapse;
+  margin: 1em auto;
+  font-size: 0.9em;
+}
+
+th, td {
+  border: 1px solid currentColor;
+  padding: 0.2em 0.4em;
+  text-align: left;
+}
+
+ul, ol {
+  margin: 0.5em 0 0.5em 1.5em;
+  padding: 0;
+}
+
+nav#toc ol {
+  list-style-type: none;
+}
+
+div.front-matter {
+  text-align: center;
+  margin: 2em 0;
+}
+
+div.front-matter p {
+  text-indent: 0;
+  margin: 0.5em 0;
+}
+
+/* EPUB 3 footnotes (native writer and pandoc) */
+aside[epub|type~="footnote"], section.footnotes {
+  font-size: 0.85em;
+}
+
+aside[epub|type~="footnote"] p, section.footnotes p {
+  text-indent: 0;
+}
+
+a[epub|type~="noteref"] {
+  vertical-align: super;
+  font-size: 0.75em;
+  line-height: 0;
+  text-decoration: none;
+}

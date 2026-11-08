@@ -6,11 +6,11 @@ from typing import Any
 import pytest
 from rich.console import Console
 
-from rebind import pipeline
-from rebind.config import Config
-from rebind.errors import RebindError
-from rebind.job import STAGE_DIRS, Job
-from rebind.manifest import Manifest
+from inkthaw import pipeline
+from inkthaw.config import Config
+from inkthaw.errors import InkthawError
+from inkthaw.job import STAGE_DIRS, Job
+from inkthaw.manifest import Manifest
 
 
 class FakeStage:
@@ -28,7 +28,7 @@ class FakeStage:
     def run(self, ctx: pipeline.StageContext) -> dict[str, Any]:
         self.runs += 1
         if self.fail:
-            raise RebindError(f"{self.name} broke")
+            raise InkthawError(f"{self.name} broke")
         (ctx.job.dir(self.name) / "out.txt").write_text(str(self.runs))
         return {"runs": self.runs}
 
@@ -97,7 +97,7 @@ def test_missing_output_dir_reruns(tmp_path: Path, fake_stages: dict[str, FakeSt
 def test_failure_is_recorded_and_retried(tmp_path: Path, fake_stages: dict[str, FakeStage]) -> None:
     job = Job(tmp_path / "job")
     fake_stages["build"].fail = True
-    with pytest.raises(RebindError, match="build broke"):
+    with pytest.raises(InkthawError, match="build broke"):
         _run(job, Config())
     m = Manifest.load(job.manifest_path)
     assert m.stages["build"].status == "failed"
@@ -110,5 +110,5 @@ def test_failure_is_recorded_and_retried(tmp_path: Path, fake_stages: dict[str, 
 
 
 def test_unknown_stage_name(tmp_path: Path, fake_stages: dict[str, FakeStage]) -> None:
-    with pytest.raises(RebindError, match="Unknown stage"):
+    with pytest.raises(InkthawError, match="Unknown stage"):
         _run(Job(tmp_path / "job"), Config(), from_stage="nope")

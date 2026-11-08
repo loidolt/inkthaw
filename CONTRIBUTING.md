@@ -1,6 +1,6 @@
-# Contributing to rebind
+# Contributing to inkthaw
 
-Thanks for helping. rebind turns scanned books into EPUBs; the bar for changes
+Thanks for helping. inkthaw turns scanned books into EPUBs; the bar for changes
 is that they make the output measurably better or the tool easier to run, and
 that they keep the project freely licensable.
 
@@ -17,7 +17,7 @@ uv sync --all-extras
 ```
 
 ```bash
-uv run rebind doctor
+uv run inkthaw doctor
 ```
 
 ## Checks
@@ -45,16 +45,16 @@ the first run downloads the models.
 
 ## How the code is organized
 
-- `src/rebind/stages/`: one module per pipeline stage. A stage reads earlier
+- `src/inkthaw/stages/`: one module per pipeline stage. A stage reads earlier
   stages' folders, writes only its own, and declares which config sections
   and tool versions affect its output (`config_keys`, `extra_key`); that is
   what lets unchanged stages be skipped. Bump a stage's `version` when you
   change what it produces.
-- `src/rebind/stages/cleanup/`: one module per rule, each a pure function
+- `src/inkthaw/stages/cleanup/`: one module per rule, each a pure function
   `(BookIR, Config) -> (BookIR, list[Change])`.
-- `src/rebind/engines/`: the engine protocol and the Docling engine.
-- `src/rebind/quality.py`, `report.py`: page flags and `report.html`.
-- `src/rebind/metrics.py`, `scripts/corpus.py`: the ground-truth benchmark.
+- `src/inkthaw/engines/`: the engine protocol and the Docling engine.
+- `src/inkthaw/quality.py`, `report.py`: page flags and `report.html`.
+- `src/inkthaw/metrics.py`, `scripts/corpus.py`: the ground-truth benchmark.
 
 [PLAN.md](PLAN.md) has the design; its §13 records decisions made since.
 
@@ -102,7 +102,7 @@ history has examples of both.
   (`scripts/check_licenses.py --app` lists such packages).
   `uv run python scripts/check_licenses.py` must pass, and
   `THIRD_PARTY_LICENSES.md` must be updated.
-- rebind is for books you own or that are in the public domain.
+- inkthaw is for books you own or that are in the public domain.
 
 ## Commits and pull requests
 

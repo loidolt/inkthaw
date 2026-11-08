@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import pytest
 
-from rebind.config import Config
-from rebind.ir import Block, BlockKind, BookIR, Page
-from rebind.stages.cleanup import apply_rules, registry
-from rebind.stages.cleanup.chapters import structure_chapters
-from rebind.stages.cleanup.footnotes import find_marker, link_footnotes, split_marker
-from rebind.stages.cleanup.frontmatter import mark_front_matter
-from rebind.stages.cleanup.headers import drop_running_headers
-from rebind.stages.cleanup.hyphenation import join_hyphenation, join_split_word
-from rebind.stages.cleanup.paragraphs import merge_paragraphs
-from rebind.stages.cleanup.reading_order import fix_reading_order
-from rebind.stages.cleanup.typography import normalize, normalize_typography
+from inkthaw.config import Config
+from inkthaw.ir import Block, BlockKind, BookIR, Page
+from inkthaw.stages.cleanup import apply_rules, registry
+from inkthaw.stages.cleanup.chapters import structure_chapters
+from inkthaw.stages.cleanup.footnotes import find_marker, link_footnotes, split_marker
+from inkthaw.stages.cleanup.frontmatter import mark_front_matter
+from inkthaw.stages.cleanup.headers import drop_running_headers
+from inkthaw.stages.cleanup.hyphenation import join_hyphenation, join_split_word
+from inkthaw.stages.cleanup.paragraphs import merge_paragraphs
+from inkthaw.stages.cleanup.reading_order import fix_reading_order
+from inkthaw.stages.cleanup.typography import normalize, normalize_typography
 
 K = BlockKind
 PROSE = "It was a dark and stormy night, and the rain fell in torrents upon the town. " * 3

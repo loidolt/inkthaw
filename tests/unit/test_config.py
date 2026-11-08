@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from rebind.config import PROFILES, Config, deep_merge, load_config
-from rebind.errors import RebindError
+from inkthaw.config import PROFILES, Config, deep_merge, load_config
+from inkthaw.errors import InkthawError
 
 
 def test_defaults_without_file(tmp_path: Path) -> None:
@@ -18,7 +18,7 @@ def test_defaults_without_file(tmp_path: Path) -> None:
 
 
 def test_file_overrides_profile_and_cli_overrides_file(tmp_path: Path) -> None:
-    (tmp_path / "rebind.toml").write_text(
+    (tmp_path / "inkthaw.toml").write_text(
         'profile = "academic"\ndpi = 400\n[metadata]\ntitle = "From file"\n'
         "[build]\ntoc_depth = 1\n[validate]\nfail_on_error = false\n"
     )
@@ -33,7 +33,7 @@ def test_file_overrides_profile_and_cli_overrides_file(tmp_path: Path) -> None:
 
 
 def test_cli_profile_beats_file_profile(tmp_path: Path) -> None:
-    (tmp_path / "rebind.toml").write_text('profile = "academic"\n')
+    (tmp_path / "inkthaw.toml").write_text('profile = "academic"\n')
     cfg = load_config(overrides={"profile": "novel"}, search_dir=tmp_path)
     assert cfg.profile == "novel"
     assert cfg.build.toc_depth == 1  # novel preset
@@ -45,25 +45,25 @@ def test_none_overrides_are_ignored(tmp_path: Path) -> None:
 
 
 def test_unknown_profile(tmp_path: Path) -> None:
-    with pytest.raises(RebindError, match="Unknown profile"):
+    with pytest.raises(InkthawError, match="Unknown profile"):
         load_config(overrides={"profile": "comic"}, search_dir=tmp_path)
 
 
 def test_unknown_key_rejected(tmp_path: Path) -> None:
-    (tmp_path / "rebind.toml").write_text("[cleanup]\nhyphenate = true\n")
-    with pytest.raises(RebindError, match="Invalid configuration"):
+    (tmp_path / "inkthaw.toml").write_text("[cleanup]\nhyphenate = true\n")
+    with pytest.raises(InkthawError, match="Invalid configuration"):
         load_config(search_dir=tmp_path)
 
 
 def test_bad_toml(tmp_path: Path) -> None:
-    (tmp_path / "rebind.toml").write_text("dpi = = 3")
-    with pytest.raises(RebindError, match="invalid TOML"):
+    (tmp_path / "inkthaw.toml").write_text("dpi = = 3")
+    with pytest.raises(InkthawError, match="invalid TOML"):
         load_config(search_dir=tmp_path)
 
 
 def test_explicit_missing_file() -> None:
-    with pytest.raises(RebindError, match="not found"):
-        load_config(Path("/nonexistent/rebind.toml"))
+    with pytest.raises(InkthawError, match="not found"):
+        load_config(Path("/nonexistent/inkthaw.toml"))
 
 
 def test_fingerprint_is_stable_and_scoped() -> None:
@@ -83,7 +83,7 @@ def test_ocr_languages_fall_back_to_metadata() -> None:
 
 
 def test_example_config_is_valid() -> None:
-    example = Path(__file__).parents[2] / "rebind.example.toml"
+    example = Path(__file__).parents[2] / "inkthaw.example.toml"
     cfg = load_config(example)
     assert cfg.profile in PROFILES
 
@@ -97,16 +97,16 @@ def test_deep_merge() -> None:
 
 @pytest.mark.parametrize("profile", sorted(PROFILES))
 def test_to_toml_round_trips(profile: str, tmp_path: Path) -> None:
-    from rebind.config import to_toml
+    from inkthaw.config import to_toml
 
     cfg = load_config(overrides={"profile": profile}, search_dir=tmp_path)
-    path = tmp_path / "rebind.toml"
+    path = tmp_path / "inkthaw.toml"
     path.write_text(to_toml(cfg))
     assert load_config(path) == cfg
 
 
 def test_profiles_differ_and_are_documented() -> None:
-    from rebind.config import PROFILE_HELP
+    from inkthaw.config import PROFILE_HELP
 
     assert set(PROFILE_HELP) == set(PROFILES)
     dumps = {
@@ -116,14 +116,14 @@ def test_profiles_differ_and_are_documented() -> None:
 
 
 def test_models_dir_from_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("REBIND_MODELS_DIR", str(tmp_path / "m"))
+    monkeypatch.setenv("INKTHAW_MODELS_DIR", str(tmp_path / "m"))
     assert load_config(search_dir=tmp_path).models_dir == tmp_path / "m"
     explicit = load_config(overrides={"models_dir": tmp_path / "x"}, search_dir=tmp_path)
     assert explicit.models_dir == tmp_path / "x"
 
 
 def test_legacy_unpaper_switch() -> None:
-    from rebind.config import Config
+    from inkthaw.config import Config
 
     assert Config.model_validate({"preprocess": {"unpaper": False}}).preprocess.backend == "none"
     assert Config.model_validate({"preprocess": {"unpaper": True}}).preprocess.backend == "builtin"

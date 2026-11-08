@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from rebind import tools
-from rebind.errors import RebindError, ToolMissingError
-from rebind.imaging import png_size, pnm_to_png, write_png
+from inkthaw import tools
+from inkthaw.errors import InkthawError, ToolMissingError
+from inkthaw.imaging import png_size, pnm_to_png, write_png
 
 
 def test_require_missing_tool() -> None:
@@ -16,7 +16,7 @@ def test_require_missing_tool() -> None:
 
 @pytest.mark.skipif(tools.which("false") is None, reason="no `false` binary")
 def test_run_failure_raises() -> None:
-    with pytest.raises(RebindError, match="exit 1"):
+    with pytest.raises(InkthawError, match="exit 1"):
         tools.run(["false"])
 
 

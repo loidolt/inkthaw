@@ -73,9 +73,9 @@ jobs:
             - NVIDIA GPU (amd64): `ghcr.io/${{ github.repository }}:${{ github.ref_name }}-cuda`
 
   # DRAFT (M5): publish the sdist and wheel to PyPI with trusted publishing, so
-  # `uvx --from 'rebind[docling]' rebind`, `pipx install 'rebind[docling]'` and
+  # `uvx --from 'inkthaw[docling]' inkthaw`, `pipx install 'inkthaw[docling]'` and
   # the Homebrew formula (packaging/homebrew/) work. Off until someone
-  #   1. adds a (pending) trusted publisher on pypi.org for project "rebind",
+  #   1. adds a (pending) trusted publisher on pypi.org for project "inkthaw",
   #      this repository, workflow "release.yml" and environment "pypi", and
   #   2. sets the repository variable PYPI_PUBLISH to "true".
   pypi:
@@ -84,7 +84,7 @@ jobs:
     needs: release
     environment:
       name: pypi
-      url: https://pypi.org/p/rebind
+      url: https://pypi.org/p/inkthaw
     permissions:
       id-token: write
       contents: read
@@ -96,8 +96,8 @@ jobs:
         run: test "v$(uv version --short)" = "$GITHUB_REF_NAME"
       - name: Wheel installs and runs without external tools
         run: |
-          whl=$(ls dist/rebind-*.whl)
-          uvx --isolated --from "$whl" rebind --version
-          uvx --isolated --from "$whl" rebind run tests/fixtures/jekyll-5p.pdf \
+          whl=$(ls dist/inkthaw-*.whl)
+          uvx --isolated --from "$whl" inkthaw --version
+          uvx --isolated --from "$whl" inkthaw run tests/fixtures/jekyll-5p.pdf \
             --to preprocess --jobs-dir "$RUNNER_TEMP/jobs"
       - uses: pypa/gh-action-pypi-publish@release/v1

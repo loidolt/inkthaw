@@ -1,12 +1,12 @@
 [project]
-name = "rebind"
+name = "inkthaw"
 version = "0.1.0"
 description = "Turn scanned PDFs into clean, reflowable EPUBs."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "THIRD_PARTY_LICENSES.md"]
 requires-python = ">=3.12"
-authors = [{ name = "rebind contributors" }]
+authors = [{ name = "inkthaw contributors" }]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: Apache Software License",
@@ -30,10 +30,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/loidolt/rebind"
-Documentation = "https://github.com/loidolt/rebind#readme"
-Issues = "https://github.com/loidolt/rebind/issues"
-Changelog = "https://github.com/loidolt/rebind/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/loidolt/inkthaw"
+Documentation = "https://github.com/loidolt/inkthaw#readme"
+Issues = "https://github.com/loidolt/inkthaw/issues"
+Changelog = "https://github.com/loidolt/inkthaw/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 # Default OCR/layout engine (MIT). Kept optional so the core installs light.
@@ -42,10 +42,10 @@ Changelog = "https://github.com/loidolt/rebind/blob/main/CHANGELOG.md"
 docling = ["docling>=2.50", "torch", "torchvision"]
 
 [project.scripts]
-rebind = "rebind.cli:app"
+inkthaw = "inkthaw.cli:app"
 
-[project.entry-points."rebind.engines"]
-docling = "rebind.engines.docling_engine:DoclingEngine"
+[project.entry-points."inkthaw.engines"]
+docling = "inkthaw.engines.docling_engine:DoclingEngine"
 
 [dependency-groups]
 dev = [

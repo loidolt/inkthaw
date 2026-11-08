@@ -12,9 +12,9 @@ from pathlib import Path
 import pytest
 from epubbook import META, sample_ir, write_image
 
-from rebind import epub, tools
-from rebind.stages.build import _bundled_css
-from rebind.stages.validate import run_epubcheck
+from inkthaw import epub, tools
+from inkthaw.stages.build import _bundled_css
+from inkthaw.stages.validate import run_epubcheck
 
 pytestmark = pytest.mark.integration
 
@@ -24,8 +24,8 @@ def epubcheck() -> list[str]:
     tools.java_works.cache_clear()
     cmd, reason = tools.epubcheck_status()
     if cmd is None:
-        if os.environ.get("REBIND_REQUIRE_EPUBCHECK"):
-            pytest.fail(f"REBIND_REQUIRE_EPUBCHECK is set but {reason}")
+        if os.environ.get("INKTHAW_REQUIRE_EPUBCHECK"):
+            pytest.fail(f"INKTHAW_REQUIRE_EPUBCHECK is set but {reason}")
         pytest.skip(reason)
     return cmd
 

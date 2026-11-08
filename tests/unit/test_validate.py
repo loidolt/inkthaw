@@ -9,14 +9,14 @@ from pathlib import Path
 import pytest
 from rich.console import Console
 
-from rebind import tools
-from rebind.config import Config
-from rebind.errors import ToolMissingError
-from rebind.imaging import write_png
-from rebind.ir import Block, BlockKind, BookIR, Page
-from rebind.job import Job
-from rebind.pipeline import StageContext
-from rebind.stages.validate import STAGE
+from inkthaw import tools
+from inkthaw.config import Config
+from inkthaw.errors import ToolMissingError
+from inkthaw.imaging import write_png
+from inkthaw.ir import Block, BlockKind, BookIR, Page
+from inkthaw.job import Job
+from inkthaw.pipeline import StageContext
+from inkthaw.stages.validate import STAGE
 
 TEXT = "The lawyer walked slowly home through the quiet streets of London that evening. " * 10
 

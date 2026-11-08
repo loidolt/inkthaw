@@ -1,6 +1,6 @@
 import pytest
 
-from rebind.metrics import (
+from inkthaw.metrics import (
     cer,
     header_leaks,
     levenshtein,

@@ -1,4 +1,4 @@
-# rebind
+# inkthaw
 
 Turn scanned PDFs into clean, reflowable EPUBs. Open source (Apache-2.0),
 free, self-hostable.
@@ -48,7 +48,7 @@ lists the pages that need a look.
 
 ## Run with Docker
 
-The easiest way to run rebind is the watch-folder service:
+The easiest way to run inkthaw is the watch-folder service:
 
 ```bash
 docker compose up -d
@@ -69,24 +69,24 @@ authors = ["Jane Author"]
 
 On first start the model weights (about 700 MB) are downloaded into `./models`
 and reused afterwards. The container runs as UID/GID 1000 by default; set
-`REBIND_UID` / `REBIND_GID` to match the owner of these folders. For an NVIDIA
+`INKTHAW_UID` / `INKTHAW_GID` to match the owner of these folders. For an NVIDIA
 GPU (needs the NVIDIA Container Toolkit):
 
 ```bash
-docker compose --profile gpu up -d rebind-gpu
+docker compose --profile gpu up -d inkthaw-gpu
 ```
 
 One-off conversion without the watcher:
 
 ```bash
-docker compose run --rm rebind run /data/inbox/book.pdf --out /data/outbox --jobs-dir /data/jobs
+docker compose run --rm inkthaw run /data/inbox/book.pdf --out /data/outbox --jobs-dir /data/jobs
 ```
 
 ## Requirements (without Docker)
 
 - Python 3.12 or newer. That is all that is required: PDF rendering (PDFium,
   via `pypdfium2`), page clean-up (deskew, border removal, despeckle) and the
-  EPUB 3 writer run inside rebind, so poppler, unpaper and pandoc are no longer
+  EPUB 3 writer run inside inkthaw, so poppler, unpaper and pandoc are no longer
   needed.
 - Optional: [EPUBCheck](https://www.w3.org/publishing/epubcheck/) and a Java
   runtime. When they are missing, the EPUB is still built and the report says
@@ -107,7 +107,7 @@ Debian / Ubuntu:
 sudo apt install epubcheck default-jre-headless
 ```
 
-On a Mac, run rebind natively rather than in Docker: Docling then uses the
+On a Mac, run inkthaw natively rather than in Docker: Docling then uses the
 GPU (MPS), about twice as fast as the CPU-only container.
 
 ## Install and check
@@ -116,11 +116,11 @@ From PyPI (once published; see the [changelog](CHANGELOG.md)), with
 [uv](https://docs.astral.sh/uv/) or pipx:
 
 ```bash
-uvx --from 'rebind[docling]' rebind run book.pdf
+uvx --from 'inkthaw[docling]' inkthaw run book.pdf
 ```
 
 ```bash
-pipx install 'rebind[docling]'
+pipx install 'inkthaw[docling]'
 ```
 
 On Linux, PyPI's torch wheel is the CUDA build (about 2.5 GB); the Docker CPU
@@ -133,30 +133,30 @@ uv sync --extra docling
 ```
 
 ```bash
-uv run rebind doctor
+uv run inkthaw doctor
 ```
 
 `doctor` lists the built-in PDF and image libraries and each external tool
 with its version, and says what is missing.
-`rebind engines` lists OCR engines and the devices they can use (CUDA, MPS,
+`inkthaw engines` lists OCR engines and the devices they can use (CUDA, MPS,
 CPU). By default model weights are downloaded into the engines' own caches on
 first use; to keep them in one folder (and run offline afterwards), set
-`models_dir` in `rebind.toml` or `REBIND_MODELS_DIR`, then:
+`models_dir` in `inkthaw.toml` or `INKTHAW_MODELS_DIR`, then:
 
 ```bash
-uv run rebind models
+uv run inkthaw models
 ```
 
 The watch-folder mode also works without Docker:
 
 ```bash
-uv run rebind watch ./inbox --out ./outbox
+uv run inkthaw watch ./inbox --out ./outbox
 ```
 
 ## Convert a book
 
 ```bash
-uv run rebind run book.pdf --title "The Book" --author "Jane Author"
+uv run inkthaw run book.pdf --title "The Book" --author "Jane Author"
 ```
 
 The EPUB is copied to `out/<slug>.epub`. The job folder keeps everything:
@@ -178,10 +178,10 @@ change. To redo part of the pipeline (for example after editing
 `40_ir/clean.json` by hand):
 
 ```bash
-uv run rebind run book.pdf --from build
+uv run inkthaw run book.pdf --from build
 ```
 
-An interrupted OCR run resumes page by page. `rebind report jobs/<slug>` shows
+An interrupted OCR run resumes page by page. `inkthaw report jobs/<slug>` shows
 each stage's status.
 
 ## What cleanup does
@@ -210,16 +210,16 @@ pages that aren't blank, leftover headers, unmatched footnotes, unbalanced
 brackets. The book also gets a 0–100 score.
 
 ```bash
-uv run rebind report jobs/<slug> --open
+uv run inkthaw report jobs/<slug> --open
 ```
 
 ## Configuration
 
 Settings come from, in increasing priority: built-in defaults, the profile
-preset, `rebind.toml` in the current directory (or `--config`), and CLI flags.
+preset, `inkthaw.toml` in the current directory (or `--config`), and CLI flags.
 
 ```bash
-uv run rebind run book.pdf --profile nonfiction
+uv run inkthaw run book.pdf --profile nonfiction
 ```
 
 | Profile | For |
@@ -229,8 +229,8 @@ uv run rebind run book.pdf --profile nonfiction
 | `academic` | as nonfiction, deeper TOC, relaxed checks for jargon and formulas |
 | `two-column` | two text columns per page |
 
-`uv run rebind config --profile academic` prints the complete effective
-configuration as a `rebind.toml` you can save and edit.
+`uv run inkthaw config --profile academic` prints the complete effective
+configuration as a `inkthaw.toml` you can save and edit.
 
 ## Documentation
 
@@ -267,5 +267,5 @@ uv run python scripts/corpus.py all
 ## Licensing
 
 Apache-2.0. Bundled engines must be permissively licensed; see
-[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md). Use rebind for books you
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md). Use inkthaw for books you
 own or that are in the public domain.

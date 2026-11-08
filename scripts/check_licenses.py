@@ -29,16 +29,16 @@ BLOCKED = re.compile(
 # Packages whose metadata is wrong or missing, checked by reading the LICENSE file.
 REVIEWED: dict[str, str] = {
     "locate": "MIT (LICENSE file); PyPI classifier wrongly says Other/Proprietary",
-    "rebind": "Apache-2.0 (this project)",
+    "inkthaw": "Apache-2.0 (this project)",
 }
 
 # Permissively licensed wheels that bundle copyleft native libraries. Fine to
-# install alongside rebind (CLI, Docker), but not inside app bundles (PLAN.md §2).
+# install alongside inkthaw (CLI, Docker), but not inside app bundles (PLAN.md §2).
 BUNDLES_COPYLEFT: dict[str, str] = {
     "opencv-python-headless": (
         "Apache-2.0, but bundles FFmpeg (LGPL-2.1+; the macOS arm64 5.0.0.93 wheel's "
         "libavcodec reports GPL-3.0+, built with x264/x265). Pulled in by rapidocr "
-        "(docling extra); not used by rebind's own code."
+        "(docling extra); not used by inkthaw's own code."
     ),
     "opencv-python": "Apache-2.0, but bundles FFmpeg and Qt (LGPL).",
 }

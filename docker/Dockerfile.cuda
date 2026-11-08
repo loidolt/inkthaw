@@ -43,12 +43,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # Runtime: any UID may run the container (compose sets user:), so HOME and
 # caches must not point at root-owned paths.
-ENV REBIND_MODELS_DIR=/models \
+ENV INKTHAW_MODELS_DIR=/models \
     HF_HOME=/models/huggingface \
     HOME=/tmp
 RUN mkdir -p /models /data && chmod 0777 /models /data \
-    && if [ "$BAKE_MODELS" = "1" ]; then rebind models && chmod -R a+rX /models; fi
+    && if [ "$BAKE_MODELS" = "1" ]; then inkthaw models && chmod -R a+rX /models; fi
 
 WORKDIR /data
-ENTRYPOINT ["rebind"]
+ENTRYPOINT ["inkthaw"]
 CMD ["watch", "/data/inbox", "--out", "/data/outbox", "--jobs-dir", "/data/jobs"]

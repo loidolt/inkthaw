@@ -1,0 +1,56 @@
+# inkthaw configuration. Copy to inkthaw.toml (picked up from the current
+# directory) or pass with --config. CLI flags override this file; this file
+# overrides the profile preset. Every key is optional.
+
+profile = "novel"          # novel | nonfiction | academic | two-column
+dpi = 300
+engine = "docling"
+device = "auto"            # auto | cpu | cuda | mps
+# models_dir = "./models"  # cache for engine model weights
+
+[metadata]
+# title = "The Book"
+# authors = ["Jane Author"]
+language = "en"
+# isbn = "9780000000000"
+# publisher = "..."
+# date = "1902"
+# cover = "cover.jpg"      # default: first page of the scan
+
+[preprocess]
+raster_mode = "render"     # render | extract (use the embedded scan image when possible)
+color = "gray"             # gray | color
+split_spreads = true
+spread_min_aspect = 1.1
+spread_order = "ltr"       # ltr | rtl
+backend = "builtin"        # builtin | unpaper (needs the unpaper binary) | none
+remove_borders = true      # builtin: wipe dark scanner borders
+despeckle = 4              # builtin: max speck size in pixels (0 = off)
+mask_content = true        # builtin: wipe outside the text area and centre it
+soften = true              # builtin: anti-alias hard glyph edges (helps OCR)
+deskew = true              # builtin
+deskew_max_angle = 2.0     # builtin: degrees
+# unpaper_args = ["--no-grayfilter"]   # backend = "unpaper" only
+
+[ocr]
+# languages = ["en"]       # default: metadata.language
+docling_ocr = "rapidocr"   # rapidocr | auto | easyocr | tesseract | ocrmac
+rapidocr_backend = "torch"
+rapidocr_params = { "Det.box_thresh" = 0.3 }
+# tables = false           # set by the profile
+pictures = true
+
+[cleanup]
+drop_furniture = true
+running_header_threshold = 0.3
+hyphenation = true
+
+[build]
+toc_depth = 2
+split_level = 1
+# css = "extra.css"
+
+[validate]
+epubcheck = true           # run EPUBCheck when it and Java are found, else skip with a note
+require_epubcheck = false  # true: fail when EPUBCheck is missing
+fail_on_error = true

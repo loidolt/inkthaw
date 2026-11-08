@@ -8,7 +8,7 @@ import pytest
 from pdfgen import PageSpec, gray_image, write_pdf
 from PIL import Image
 
-from rebind import pdf
+from inkthaw import pdf
 
 
 def _stripes(x: int, y: int) -> int:

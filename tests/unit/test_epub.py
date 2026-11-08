@@ -1,4 +1,4 @@
-"""Native EPUB 3 writer (rebind.epub) and the build stage's native backend."""
+"""Native EPUB 3 writer (inkthaw.epub) and the build stage's native backend."""
 
 from __future__ import annotations
 
@@ -12,12 +12,12 @@ import pytest
 from epubbook import META, PROSE, b, read, sample_ir, write_image
 from rich.console import Console
 
-from rebind import epub, tools
-from rebind.config import Config
-from rebind.ir import BlockKind, BookIR
-from rebind.job import Job
-from rebind.pipeline import StageContext
-from rebind.stages.build import STAGE, _bundled_css
+from inkthaw import epub, tools
+from inkthaw.config import Config
+from inkthaw.ir import BlockKind, BookIR
+from inkthaw.job import Job
+from inkthaw.pipeline import StageContext
+from inkthaw.stages.build import STAGE, _bundled_css
 
 XHTML = "{http://www.w3.org/1999/xhtml}"
 OPF = "{http://www.idpf.org/2007/opf}"
@@ -365,7 +365,7 @@ def test_build_stage_pandoc_backend_requires_pandoc(
     job = _job(tmp_path)
     cfg = Config.model_validate({"build": {"backend": "pandoc"}})
     ctx = StageContext(job=job, cfg=cfg, manifest=job.load_manifest(), console=Console(quiet=True))
-    from rebind.errors import ToolMissingError
+    from inkthaw.errors import ToolMissingError
 
     with pytest.raises(ToolMissingError, match="pandoc"):
         STAGE.run(ctx)

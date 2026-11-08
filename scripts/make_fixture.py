@@ -31,7 +31,7 @@ OUT = ROOT / "tests" / "fixtures" / "jekyll-5p.pdf"
 
 def fetch(leaf: int) -> bytes:
     url = f"https://archive.org/download/{ITEM}/page/n{leaf}.jpg"
-    req = urllib.request.Request(url, headers={"User-Agent": "rebind-fixture-builder"})
+    req = urllib.request.Request(url, headers={"User-Agent": "inkthaw-fixture-builder"})
     with urllib.request.urlopen(req, timeout=60) as r:
         return r.read()
 

@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     env:
-      REBIND_MODELS_DIR: ${{ github.workspace }}/.models
+      INKTHAW_MODELS_DIR: ${{ github.workspace }}/.models
     steps:
       - uses: actions/checkout@v4
       - name: External tools
@@ -34,7 +34,7 @@ jobs:
           key: corpus-${{ hashFiles('uv.lock', 'tests/corpus/manifest.toml') }}
           restore-keys: corpus-
       - run: uv sync --locked --extra docling
-      - run: uv run rebind models
+      - run: uv run inkthaw models
       - name: Fetch, convert, score
         run: uv run python scripts/corpus.py all ${{ inputs.book }} --label "ci ${{ github.sha }}"
       - uses: actions/upload-artifact@v4

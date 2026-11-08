@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from rebind.ir import IR_VERSION, Block, BlockKind, BookIR, Page
-from rebind.job import Job, sha256_file, slugify
-from rebind.manifest import Manifest
+from inkthaw.ir import IR_VERSION, Block, BlockKind, BookIR, Page
+from inkthaw.job import Job, sha256_file, slugify
+from inkthaw.manifest import Manifest
 
 
 def sample_ir() -> BookIR:

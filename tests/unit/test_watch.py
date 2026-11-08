@@ -6,10 +6,10 @@ from typing import Any
 import pytest
 from rich.console import Console
 
-from rebind import watch
-from rebind.config import Config
-from rebind.errors import RebindError
-from rebind.job import Job
+from inkthaw import watch
+from inkthaw.config import Config
+from inkthaw.errors import InkthawError
+from inkthaw.job import Job
 
 
 @pytest.fixture
@@ -30,7 +30,7 @@ def fake_pipeline(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
     def run(job: Job, cfg: Config, *, input_pdf: Path, console: Console) -> None:
         calls.append({"job": job, "cfg": cfg, "pdf": input_pdf})
         if b"broken" in input_pdf.read_bytes():
-            raise RebindError("ingest failed: not a PDF")
+            raise InkthawError("ingest failed: not a PDF")
         job.epub.parent.mkdir(parents=True, exist_ok=True)
         job.epub.write_bytes(b"EPUB " + input_pdf.name.encode())
 

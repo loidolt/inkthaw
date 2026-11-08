@@ -21,11 +21,11 @@ import pytest
 from conftest import FIXTURES
 from rich.console import Console
 
-from rebind import tools
-from rebind.config import load_config
-from rebind.job import Job
-from rebind.manifest import Manifest
-from rebind.pipeline import run_pipeline
+from inkthaw import tools
+from inkthaw.config import load_config
+from inkthaw.job import Job
+from inkthaw.manifest import Manifest
+from inkthaw.pipeline import run_pipeline
 
 pytestmark = [
     pytest.mark.integration,
@@ -36,7 +36,7 @@ ALLOWED_TOOLS = ("epubcheck", "java")
 
 
 def _minimal_path(bindir: Path) -> str:
-    """A PATH with only symlinks to the tools rebind may call (no pandoc, poppler, unpaper)."""
+    """A PATH with only symlinks to the tools inkthaw may call (no pandoc, poppler, unpaper)."""
     bindir.mkdir()
     for name in ALLOWED_TOOLS:
         if found := shutil.which(name):
@@ -48,8 +48,8 @@ def _minimal_path(bindir: Path) -> str:
 def epubcheck_expected() -> bool:
     tools.java_works.cache_clear()
     found = tools.epubcheck_status()[0] is not None
-    if os.environ.get("REBIND_REQUIRE_EPUBCHECK") and not found:
-        pytest.fail("REBIND_REQUIRE_EPUBCHECK is set but EPUBCheck/Java is not usable")
+    if os.environ.get("INKTHAW_REQUIRE_EPUBCHECK") and not found:
+        pytest.fail("INKTHAW_REQUIRE_EPUBCHECK is set but EPUBCheck/Java is not usable")
     return found
 
 

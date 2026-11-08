@@ -1,7 +1,7 @@
 import pytest
 
-from rebind.ir import Block, BlockKind, BookIR
-from rebind.markdown import escape, render
+from inkthaw.ir import Block, BlockKind, BookIR
+from inkthaw.markdown import escape, render
 
 
 @pytest.mark.parametrize(

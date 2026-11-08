@@ -11,7 +11,7 @@ from typing import Any
 
 from PIL import Image
 
-from rebind.ir import Block, BlockKind, BookIR
+from inkthaw.ir import Block, BlockKind, BookIR
 
 PROSE = "It was a dark and stormy night; the rain fell in torrents. " * 4
 

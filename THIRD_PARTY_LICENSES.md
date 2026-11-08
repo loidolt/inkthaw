@@ -1,17 +1,17 @@
 # Third-party licenses
 
-rebind itself is Apache-2.0. This file lists what rebind depends on or ships
+inkthaw itself is Apache-2.0. This file lists what inkthaw depends on or ships
 alongside. Keep it current whenever a dependency, model, or bundled tool changes
 (see PLAN.md §2).
 
-## Python dependencies (installed with rebind)
+## Python dependencies (installed with inkthaw)
 
 | Package | License | Notes |
 |---|---|---|
 | typer | MIT | CLI |
 | pydantic | MIT | config, BookIR |
 | rich | MIT | terminal output |
-| wordfreq | Apache-2.0 (code); word-frequency data CC-BY-SA 4.0 | dictionary checks: hyphenation joins, garbled-text flags. The data is used at runtime, not redistributed by rebind itself; anyone redistributing an image or bundle that includes wordfreq must keep its data attribution. |
+| wordfreq | Apache-2.0 (code); word-frequency data CC-BY-SA 4.0 | dictionary checks: hyphenation joins, garbled-text flags. The data is used at runtime, not redistributed by inkthaw itself; anyone redistributing an image or bundle that includes wordfreq must keep its data attribution. |
 | ftfy | Apache-2.0 | wordfreq dependency |
 | langcodes | MIT | wordfreq dependency |
 | locate | MIT | wordfreq dependency (its PyPI classifier says "Other/Proprietary", but the shipped LICENSE file is MIT) |
@@ -23,7 +23,7 @@ alongside. Keep it current whenever a dependency, model, or bundled tool changes
 | Pillow | MIT-CMU (HPND) | page images; wheels bundle libjpeg-turbo, libpng, libtiff, libwebp, libavif, FreeType, HarfBuzz, Little CMS, OpenJPEG, zlib-ng, Brotli, libxcb (all permissive) |
 | numpy | BSD-3-Clause | in-process preprocessing (replaces unpaper since M5); Linux wheels bundle OpenBLAS (BSD-3-Clause) and libgfortran (GPL-3.0 with the GCC Runtime Library Exception, which permits redistribution in any program) |
 
-## Default engine (optional extra `rebind[docling]`)
+## Default engine (optional extra `inkthaw[docling]`)
 
 | Package / model | License | Notes |
 |---|---|---|
@@ -40,8 +40,8 @@ dependencies are recorded in `uv.lock`.
 **Bundled native code to watch:** rapidocr depends on `opencv-python-headless`
 (Apache-2.0). Its wheels bundle FFmpeg, which is LGPL-2.1+, and the macOS arm64
 wheel (5.0.0.93) ships an FFmpeg built with `--enable-gpl` (x264, x265; its
-`libavcodec` reports "GPL version 3 or later"). rebind's own code does not use
-OpenCV. Installing it next to rebind (CLI, Docker) is aggregation, but it must
+`libavcodec` reports "GPL version 3 or later"). inkthaw's own code does not use
+OpenCV. Installing it next to inkthaw (CLI, Docker) is aggregation, but it must
 not go into the desktop or mobile app bundles as is (PLAN.md §2);
 `scripts/check_licenses.py --app` fails on it.
 
@@ -52,12 +52,12 @@ which bring NVIDIA's CUDA runtime libraries (`nvidia-*` packages, e.g. cuBLAS,
 cuDNN). These are proprietary but redistributable under the
 [NVIDIA CUDA EULA](https://docs.nvidia.com/cuda/eula/) and the NVIDIA
 Deep Learning Container license that covers the base image. They are not part
-of the CPU image or of `pip install rebind`. `triton` (MIT) is also included.
+of the CPU image or of `pip install inkthaw`. `triton` (MIT) is also included.
 
 ## External command-line tools (invoked as separate processes, not linked)
 
 These are not Python dependencies. The Docker images ship EPUBCheck and a JRE
-as separate programs alongside rebind (aggregation). None of them may
+as separate programs alongside inkthaw (aggregation). None of them may
 go into the desktop or mobile app bundles if GPL (PLAN.md §2).
 
 | Tool | License | Status |

@@ -14,11 +14,11 @@ from conftest import need_tools
 from pdfgen import PageSpec, gray_image, write_pdf
 from rich.console import Console
 
-from rebind.config import Config
-from rebind.imaging import png_size
-from rebind.job import Job
-from rebind.pipeline import run_pipeline
-from rebind.stages import read_pages
+from inkthaw.config import Config
+from inkthaw.imaging import png_size
+from inkthaw.job import Job
+from inkthaw.pipeline import run_pipeline
+from inkthaw.stages import read_pages
 
 
 def _text_lines(x: int, y: int) -> int:

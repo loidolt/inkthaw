@@ -1,7 +1,7 @@
 """Ground-truth benchmark over tests/corpus/manifest.toml.
 
     uv run python scripts/corpus.py fetch jekyll-hyde     # download + verify scan and text
-    uv run python scripts/corpus.py run jekyll-hyde       # convert with rebind
+    uv run python scripts/corpus.py run jekyll-hyde       # convert with inkthaw
     uv run python scripts/corpus.py score jekyll-hyde     # CER/WER/paragraph F1 -> results/
     uv run python scripts/corpus.py all                   # every book, all three steps
 
@@ -27,7 +27,7 @@ CORPUS = ROOT / "tests" / "corpus"
 DOWNLOADS = CORPUS / "downloads"
 JOBS = CORPUS / "jobs"
 RESULTS = CORPUS / "results"
-USER_AGENT = "rebind-corpus-benchmark"
+USER_AGENT = "inkthaw-corpus-benchmark"
 
 
 def load_manifest() -> dict[str, dict[str, Any]]:
@@ -72,7 +72,7 @@ def fetch(book: dict[str, Any]) -> None:
     if first is None:
         p["scan"].write_bytes(p["full"].read_bytes())
     elif not p["scan"].is_file():
-        from rebind.pdf import write_subset
+        from inkthaw.pdf import write_subset
 
         write_subset(p["full"], p["scan"], first, last)
     print(f"{book['id']}: ready ({p['scan']})")
@@ -83,7 +83,7 @@ def run(book: dict[str, Any]) -> None:
     args = [
         sys.executable,
         "-m",
-        "rebind.cli",
+        "inkthaw.cli",
         "run",
         str(p["scan"]),
         "--jobs-dir",
@@ -136,7 +136,7 @@ def cut(paras: list[str], start: str | None, end: str | None, occurrence: int = 
 
 
 def output_paragraphs(job: Path) -> list[str]:
-    from rebind.ir import BlockKind, BookIR
+    from inkthaw.ir import BlockKind, BookIR
 
     keep = {
         BlockKind.HEADING,
@@ -164,8 +164,8 @@ def git_commit() -> str | None:
 
 
 def score_book(book: dict[str, Any], job: Path, label: str | None) -> dict[str, Any]:
-    from rebind import __version__
-    from rebind.metrics import score
+    from inkthaw import __version__
+    from inkthaw.metrics import score
 
     gt_cfg, out_cfg = book["ground_truth"], book.get("output", {})
     ref = cut(
@@ -184,7 +184,7 @@ def score_book(book: dict[str, Any], job: Path, label: str | None) -> dict[str, 
         "id": book["id"],
         "label": label,
         "date": datetime.now(UTC).isoformat(timespec="seconds"),
-        "rebind_version": __version__,
+        "inkthaw_version": __version__,
         "git_commit": git_commit(),
         "engine": cfg.get("engine"),
         "engine_version": manifest["stages"].get("ocr", {}).get("info", {}).get("engine_version"),

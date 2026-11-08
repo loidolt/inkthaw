@@ -32,14 +32,14 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --locked
-      - run: uv run rebind doctor || true  # informative; no engine installed in this job
-      - run: uv run pytest -m "not integration" --cov=rebind --cov-report=term-missing
+      - run: uv run inkthaw doctor || true  # informative; no engine installed in this job
+      - run: uv run pytest -m "not integration" --cov=inkthaw --cov-report=term-missing
 
   integration:
     runs-on: ubuntu-24.04
     needs: unit
     env:
-      REBIND_MODELS_DIR: ${{ github.workspace }}/.models
+      INKTHAW_MODELS_DIR: ${{ github.workspace }}/.models
     steps:
       - uses: actions/checkout@v4
       # EPUBCheck (+ Java) is optional but CI insists on it below. pandoc,
@@ -60,15 +60,15 @@ jobs:
           key: models-${{ runner.os }}-${{ hashFiles('uv.lock') }}
           restore-keys: models-${{ runner.os }}-
       - run: uv sync --locked --extra docling
-      - run: uv run rebind doctor
-      - run: uv run rebind models
+      - run: uv run inkthaw doctor
+      - run: uv run inkthaw models
       - run: uv run python scripts/check_licenses.py
       - run: uv run pytest -m integration -v
         env:
-          REBIND_REQUIRE_EPUBCHECK: "1"
+          INKTHAW_REQUIRE_EPUBCHECK: "1"
 
   # The built wheel alone (no apt/brew packages) must ingest, render and clean
-  # pages on Linux and macOS: what `uvx rebind` / `pipx install rebind` get.
+  # pages on Linux and macOS: what `uvx inkthaw` / `pipx install inkthaw` get.
   wheel:
     needs: unit
     strategy:
@@ -82,9 +82,9 @@ jobs:
       - run: uv build
       - name: Run from the wheel with no external tools
         run: |
-          whl=$(ls dist/rebind-*.whl)
-          uvx --isolated --from "$whl" rebind --version
-          uvx --isolated --from "$whl" rebind run tests/fixtures/jekyll-5p.pdf \
+          whl=$(ls dist/inkthaw-*.whl)
+          uvx --isolated --from "$whl" inkthaw --version
+          uvx --isolated --from "$whl" inkthaw run tests/fixtures/jekyll-5p.pdf \
             --to preprocess --jobs-dir "$RUNNER_TEMP/jobs"
           ls "$RUNNER_TEMP/jobs/jekyll-5p/20_clean"
 
@@ -99,10 +99,10 @@ jobs:
           context: .
           file: docker/Dockerfile.cpu
           load: true
-          tags: rebind:cpu
+          tags: inkthaw:cpu
           cache-from: type=gha,scope=ci-cpu
           cache-to: type=gha,mode=max,scope=ci-cpu
       - name: Smoke test
-        run: docker run --rm rebind:cpu doctor
+        run: docker run --rm inkthaw:cpu doctor
       - name: Licenses in the image
-        run: docker run --rm -i --entrypoint python rebind:cpu - < scripts/check_licenses.py
+        run: docker run --rm -i --entrypoint python inkthaw:cpu - < scripts/check_licenses.py

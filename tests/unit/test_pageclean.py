@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from PIL import Image, ImageDraw
 
-from rebind import pageclean
+from inkthaw import pageclean
 
 
 def text_page(width: int = 1500, height: int = 2100) -> Image.Image:

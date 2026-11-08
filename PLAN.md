@@ -1,8 +1,8 @@
-# rebind — Project Plan
+# inkthaw — Project Plan
 
 Turn scanned PDFs into clean, reflowable EPUBs. Fully open source, free, self-hostable.
 
-Repo name: `rebind` (a scanned book, taken apart and rebound as an ebook).
+Repo name: `inkthaw` (a scanned book, taken apart and rebound as an ebook).
 
 ## 1. Goals and non-goals
 
@@ -18,8 +18,8 @@ Repo name: `rebind` (a scanned book, taken apart and rebound as an ebook).
 
 ### Non-goals (for now)
 
-- A hosted conversion service. rebind stays self-hosted: books never leave the user's own machines.
-- Running the OCR pipeline on phones. Mobile apps are clients of the user's own rebind server (§10.5).
+- A hosted conversion service. inkthaw stays self-hosted: books never leave the user's own machines.
+- Running the OCR pipeline on phones. Mobile apps are clients of the user's own inkthaw server (§10.5).
 - DRM, ebook stores, or anything aimed at copyrighted material the user doesn't own.
 - Perfect output on every book with no review. The aim is to make review fast.
 
@@ -57,7 +57,7 @@ jobs/<slug>/
 ```
 
 - Each stage reads the previous stage's output and writes only its own folder.
-- `rebind run <pdf> --from <stage>` re-runs from any stage. A stage is skipped if its inputs and config hash are unchanged.
+- `inkthaw run <pdf> --from <stage>` re-runs from any stage. A stage is skipped if its inputs and config hash are unchanged.
 
 ### BookIR (the key abstraction)
 
@@ -99,7 +99,7 @@ Define it with Pydantic v2 and version the schema (`ir_version`).
 ### 4.3 ocr (engine plugin)
 
 - `Engine` protocol: `name`, `version`, `capabilities`, and `convert(pages: list[Path], cfg) -> BookIR`.
-- Register engines via Python entry points (`rebind.engines`) so third-party plugins can be installed separately.
+- Register engines via Python entry points (`inkthaw.engines`) so third-party plugins can be installed separately.
 - Docling engine (default): map Docling's document labels straight onto BookIR kinds. Docling's page-header and page-footer labels give header removal for free; heuristics in 4.4 are the fallback.
 - Choose the device automatically (CUDA → MPS → CPU), overridable in config.
 - Cache model weights in a mounted volume, never re-downloading on each run.
@@ -119,7 +119,7 @@ Each rule is a separate, unit-tested function `IR -> IR` that can be switched on
 
 ### 4.5 build
 
-- Write EPUB 3 directly from BookIR (`rebind.epub`, native writer since the M5 follow-up; §13): XHTML
+- Write EPUB 3 directly from BookIR (`inkthaw.epub`, native writer since the M5 follow-up; §13): XHTML
   chapters split at a heading level, `nav.xhtml` + `toc.ncx` to a TOC depth from config, OPF metadata,
   a cover (user-supplied, or the first page image), the bundled CSS, EPUB 3 footnotes.
 - Optional backend (`build.backend = "pandoc"`): render BookIR to Pandoc Markdown and run `pandoc`
@@ -140,7 +140,7 @@ Each rule is a separate, unit-tested function `IR -> IR` that can be switched on
 
 ## 5. Config and profiles
 
-- A single `rebind.toml`, overridable by CLI flags. Validated with Pydantic.
+- A single `inkthaw.toml`, overridable by CLI flags. Validated with Pydantic.
 - Profiles are presets that change preprocessing and cleanup settings:
   - `novel`: single column, minimal footnotes.
   - `nonfiction`: footnotes, a figure here and there.
@@ -165,12 +165,12 @@ running_header_threshold = 0.3
 ## 6. CLI
 
 ```
-rebind run book.pdf [--profile novel] [--title ... --author ...] [--from cleanup] [--out ./out]
-rebind watch ./inbox --out ./outbox        # watch-folder mode for Docker
-rebind report jobs/<slug>                  # rebuild/open the HTML report
-rebind engines                             # list installed engines + devices
-rebind doctor                              # check libraries and external tools (all optional: epubcheck, unpaper, pandoc)
-rebind serve [--host ...] [--port ...]     # HTTP API + web UI (M6/M7)
+inkthaw run book.pdf [--profile novel] [--title ... --author ...] [--from cleanup] [--out ./out]
+inkthaw watch ./inbox --out ./outbox        # watch-folder mode for Docker
+inkthaw report jobs/<slug>                  # rebuild/open the HTML report
+inkthaw engines                             # list installed engines + devices
+inkthaw doctor                              # check libraries and external tools (all optional: epubcheck, unpaper, pandoc)
+inkthaw serve [--host ...] [--port ...]     # HTTP API + web UI (M6/M7)
 ```
 
 ## 7. Tech stack
@@ -187,10 +187,10 @@ rebind serve [--host ...] [--port ...]     # HTTP API + web UI (M6/M7)
 ## 8. Repo layout
 
 ```
-rebind/
+inkthaw/
   README.md  LICENSE  THIRD_PARTY_LICENSES.md  PLAN.md  CONTRIBUTING.md
-  pyproject.toml  uv.lock  rebind.example.toml
-  src/rebind/
+  pyproject.toml  uv.lock  inkthaw.example.toml
+  src/inkthaw/
     cli.py  config.py  manifest.py  ir.py
     stages/ ingest.py preprocess.py ocr.py cleanup/ build.py validate.py report.py
     stages/cleanup/ furniture.py headers.py hyphenation.py paragraphs.py typography.py footnotes.py chapters.py
@@ -216,7 +216,7 @@ rebind/
 
 - `Dockerfile.cpu`: `python:3.12-slim` plus a headless JRE with epubcheck (poppler and unpaper dropped in M5, pandoc after the native EPUB writer). Multi-arch (amd64 and arm64).
 - `Dockerfile.cuda`: NVIDIA CUDA runtime base, same tools.
-- `compose.yml`: one `rebind watch` service with `inbox/`, `outbox/`, `jobs/` and `models/` volumes, plus a GPU profile.
+- `compose.yml`: one `inkthaw watch` service with `inbox/`, `outbox/`, `jobs/` and `models/` volumes, plus a GPU profile.
 - Publish to GHCR on tagged releases.
 
 ### CI (GitHub Actions)
@@ -243,12 +243,12 @@ also opens up Apple Vision OCR (`ocrmac`, already an option) on the Neural Engin
 Desktop with WSL2 does pass CUDA through, so a native Windows app is about ease of install more than
 speed.
 
-### 10.2 Ways to run rebind
+### 10.2 Ways to run inkthaw
 
 | Surface | For | Backend | Ships |
 |---|---|---|---|
-| CLI (`uvx rebind`, `pipx`, Homebrew) | technical users, scripts | local Python | M5 |
-| Docker (watch folder, `rebind serve`) | NAS and server self-hosters | container | M3, web UI from M7 |
+| CLI (`uvx inkthaw`, `pipx`, Homebrew) | technical users, scripts | local Python | M5 |
+| Docker (watch folder, `inkthaw serve`) | NAS and server self-hosters | container | M3, web UI from M7 |
 | Desktop app (macOS, then Windows) | everyone else | bundled Python sidecar | M8, M10 |
 | Mobile app (iOS, then Android) | capture and review on the go | the user's desktop app or Docker server | M9, M10 |
 
@@ -258,7 +258,7 @@ Docker stays: it is the right fit for always-on home servers. The apps do not re
 
 ```
 SvelteKit static build (@loidolt/theme-svelte)
-  ├── browser                       ── served by rebind serve (CLI / Docker) ──┐
+  ├── browser                       ── served by inkthaw serve (CLI / Docker) ──┐
   ├── Tauri 2 (macOS / Windows)     ── local Python sidecar ───────────────────┼──► FastAPI /api/v1
   └── Capacitor (iOS / Android)     ── paired server over LAN / Tailscale ─────┘
 ```
@@ -279,12 +279,12 @@ SvelteKit static build (@loidolt/theme-svelte)
   a sidecar for the frozen Python backend, and an updater. Tauri's mobile targets are not used: the
   theme's Capacitor work already covers mobile.
 - **New theme package `@loidolt/theme-tauri`**, built in the loidolt-theme repo alongside M8, on the
-  same pattern as the Capacitor one (plugins passed in, inert in a browser, no rebind-specific code):
+  same pattern as the Capacitor one (plugins passed in, inert in a browser, no inkthaw-specific code):
   overlay title bar clear of the macOS window buttons (via the `--ldt-safe-*` knobs) and drag regions
   on `Topbar`; window background and appearance following the system theme (no white flash); native
   menu bar wired to app commands and shortcuts; native file dialogs and file drop onto the window; OS
   notifications; single instance, deep links, and an optional tray icon for watch mode.
-- **Stays in rebind, not the theme:** the document-scanner plugin (VisionKit on iOS, ML Kit on
+- **Stays in inkthaw, not the theme:** the document-scanner plugin (VisionKit on iOS, ML Kit on
   Android), device pairing (QR code with a token, mDNS discovery), and the API client. Generic native
   pieces (share sheet, file picker) go to the theme.
 
@@ -300,14 +300,14 @@ SvelteKit static build (@loidolt/theme-svelte)
   make us a host with takedown and liability exposure. Self-hosting avoids that.
 
 Camera capture (VisionKit / ML Kit document scanner producing a PDF) lets people without a scanner
-rebind a book they own. It is likely the main reason to have a mobile app.
+inkthaw a book they own. It is likely the main reason to have a mobile app.
 
 ## 11. Milestones
 
 ### M0 — Scaffold
 
-- Repo, license, `pyproject`, CLI skeleton, config loading, BookIR models, manifest, `rebind doctor`.
-- Done when: `uv run rebind doctor` reports tool status and CI is green.
+- Repo, license, `pyproject`, CLI skeleton, config loading, BookIR models, manifest, `inkthaw doctor`.
+- Done when: `uv run inkthaw doctor` reports tool status and CI is green.
 
 ### M1 — End-to-end happy path
 
@@ -343,21 +343,21 @@ M5 decisions in §13).
   EPUB writer, pandoc optional (§13).*
 - epubcheck becomes optional: run when Java + EPUBCheck are found, otherwise skip with a note in the
   report. App builds may bundle a trimmed `jlink` runtime later.
-- Publish to PyPI (`uvx rebind`, `pipx install rebind`) and add a Homebrew formula.
-- Done when: `uvx --from 'rebind[docling]' rebind run book.pdf` works on a clean Mac with nothing from
+- Publish to PyPI (`uvx inkthaw`, `pipx install inkthaw`) and add a Homebrew formula.
+- Done when: `uvx --from 'inkthaw[docling]' inkthaw run book.pdf` works on a clean Mac with nothing from
   Homebrew, uses MPS, and the corpus CER does not get worse.
 
 ### M6 — Server and API
 
-- `rebind serve`: FastAPI with a versioned OpenAPI contract (`/api/v1`), token auth, upload, per-job
+- `inkthaw serve`: FastAPI with a versioned OpenAPI contract (`/api/v1`), token auth, upload, per-job
   progress events (SSE), job artifacts (EPUB, report, page images, IR), and rebuild after edits.
 - In-process job queue on SQLite; the watch folder feeds the same queue.
-- Done when: a job submitted over the API produces the same job folder as `rebind run`, and API
+- Done when: a job submitted over the API produces the same job folder as `inkthaw run`, and API
   contract tests run in CI.
 
 ### M7 — Web UI
 
-- SvelteKit static build on `@loidolt/theme-svelte`, served by `rebind serve` and in the Docker images:
+- SvelteKit static build on `@loidolt/theme-svelte`, served by `inkthaw serve` and in the Docker images:
   upload, queue and progress, the quality report, and a review screen (page image beside editable text,
   rebuild on save).
 - Add the theme and its fonts to `THIRD_PARTY_LICENSES.md`.
@@ -485,11 +485,11 @@ Decisions made while building, recorded so the plan stays the source of truth.
 - **`compose.yml` lives at the repository root** (not `docker/`), so the
   done-criterion command is literally `docker compose up`. Dockerfiles are in
   `docker/`.
-- **Model weights:** with `models_dir` (or `REBIND_MODELS_DIR`, set to
+- **Model weights:** with `models_dir` (or `INKTHAW_MODELS_DIR`, set to
   `/models` in the images) the Docling engine downloads exactly the weights it
   needs (layout, TableFormer, RapidOCR for the configured languages) once and
-  then runs offline via Docling's `artifacts_path`. `rebind models` prefetches;
-  `rebind watch` prefetches at start-up. Images can bake weights in with
+  then runs offline via Docling's `artifacts_path`. `inkthaw models` prefetches;
+  `inkthaw watch` prefetches at start-up. Images can bake weights in with
   `--build-arg BAKE_MODELS=1`.
 - **Watch mode polls** (no new dependency such as watchdog): a PDF is taken
   once its size and mtime are unchanged between two polls. Per-book settings
@@ -508,7 +508,7 @@ Decisions made while building, recorded so the plan stays the source of truth.
 - **Profiles** now differ in more than one switch: `novel` has a chapters-only
   TOC; `nonfiction`, `academic` and `two-column` turn on footnote linking and
   tables; `academic` relaxes the dictionary-based flags; `two-column` relaxes
-  the "too much text" flag. `rebind profiles` lists them and `rebind config`
+  the "too much text" flag. `inkthaw profiles` lists them and `inkthaw config`
   prints the merged settings as TOML (round-trip tested).
 - **Footnotes on real data:** a 12-page Gibbon excerpt (numbered notes plus
   editor's `*` notes) linked 27 of 36 notes after two fixes: references right
@@ -566,7 +566,7 @@ Decisions made while building, recorded so the plan stays the source of truth.
   -version` works (macOS's `/usr/bin/java` stub does not count). Otherwise the
   report records `"skipped": true` with the reason and the stage warns.
   `validate.require_epubcheck = true` makes it mandatory; CI sets
-  `REBIND_REQUIRE_EPUBCHECK=1` for the integration test so validation is never
+  `INKTHAW_REQUIRE_EPUBCHECK=1` for the integration test so validation is never
   silently skipped there.
 - **pandoc: write EPUB 3 directly from BookIR, before M8; keep pandoc for
   now.** Bundling pandoc is ruled out for the desktop and iOS apps (GPL, §2),
@@ -583,14 +583,14 @@ Decisions made while building, recorded so the plan stays the source of truth.
   fails on them. M8 has to replace or strip that wheel before the Python
   sidecar can ship.
 - **Packaging.** `release.yml` gains a draft PyPI job (trusted publishing,
-  gated on the repository variable `PYPI_PUBLISH`); the name `rebind` was free
-  on PyPI on 2026-11-08. `packaging/homebrew/rebind.rb` is a draft tap formula
-  that pip-installs `rebind[docling]` into a virtualenv (resource blocks for
+  gated on the repository variable `PYPI_PUBLISH`); the name `inkthaw` was free
+  on PyPI on 2026-11-08. `packaging/homebrew/inkthaw.rb` is a draft tap formula
+  that pip-installs `inkthaw[docling]` into a virtualenv (resource blocks for
   ~120 packages including torch are not practical); homebrew-core would need a
   Docling-free package first. On Linux, PyPI's torch is the CUDA build, so the
   Docker CPU image stays the light option there. CI gains a `wheel` job that
   runs the built wheel on Linux and macOS with no external tools.
-- **Not verified here:** the `uvx --from 'rebind[docling]' rebind run` path on
+- **Not verified here:** the `uvx --from 'inkthaw[docling]' inkthaw run` path on
   a clean Mac (nothing is on PyPI yet); the built wheel was run with only
   `/usr/bin:/bin` on PATH up to the preprocess stage, and the full pipeline
   with only pandoc, EPUBCheck and Java on PATH (integration test, MPS for the
@@ -598,14 +598,14 @@ Decisions made while building, recorded so the plan stays the source of truth.
 
 ### Native EPUB writer decisions (after M5, before M8)
 
-- **EPUB 3 is written in-process (`rebind.epub`); pandoc is optional.** The
+- **EPUB 3 is written in-process (`inkthaw.epub`); pandoc is optional.** The
   writer uses only the standard library (`zipfile`, `html.escape`, string
   building) plus Pillow, already a core dependency, to read the cover's size
   and to convert images that are not EPUB core media types to PNG. No new
   dependency, so the desktop and iOS bundles can build EPUBs (§2).
   `build.backend = "native"` is the default; `"pandoc"` keeps the old
   Markdown path (`book.md`, `metadata.yaml`, pandoc ≥ 3) for comparison.
-  `tools.py` marks pandoc optional, so `rebind doctor` no longer requires any
+  `tools.py` marks pandoc optional, so `inkthaw doctor` no longer requires any
   external tool. Build stage version 3; the backend is part of its key.
 - **Same container layout as pandoc** (`EPUB/content.opf`, `nav.xhtml`,
   `toc.ncx`, `text/chNNN.xhtml`, `styles/`, `media/`) and the same spine
@@ -641,3 +641,15 @@ Decisions made while building, recorded so the plan stays the source of truth.
 - **Not done:** page-list navigation and `epub:type="pagebreak"` markers from
   the source page numbers (BookIR has them, so this is a natural follow-up),
   and MathML.
+
+### Name (after M5, before the first PyPI release)
+
+- **The project is called inkthaw, not rebind.** A scan is a frozen picture
+  of a page; inkthaw thaws it into text that flows. rebind was dropped before
+  any account was registered: Rebind Publishing, LLC (rebind.ai, an AI-assisted
+  ebook publisher of public-domain classics) has pending US trademark
+  applications for REBIND and REBIND PUBLISHING covering e-book publishing,
+  and at least four other 2026 PDF-to-EPUB projects and a KOReader plugin
+  already use the name. inkthaw had no conflicts on PyPI, Homebrew, npm,
+  crates.io or GitHub and no web or brand hits when checked (2026-11-08);
+  inkthaw.com is registered for the project.

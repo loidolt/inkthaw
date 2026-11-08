@@ -6,26 +6,26 @@ Each setting comes from the first of these that sets it, highest first:
 
 1. Command-line flags (`--dpi`, `--title`, `--profile`, ...)
 2. In watch mode, the book's sidecar file: `inbox/<name>.toml` next to `<name>.pdf`
-3. `rebind.toml` in the current directory, or the file given with `--config`
+3. `inkthaw.toml` in the current directory, or the file given with `--config`
 4. The profile preset
 5. Built-in defaults
 
-`REBIND_MODELS_DIR` sets `models_dir` when no file or flag does.
+`INKTHAW_MODELS_DIR` sets `models_dir` when no file or flag does.
 
 See the result for any combination:
 
 ```bash
-uv run rebind config --profile academic
+uv run inkthaw config --profile academic
 ```
 
-The output is a complete `rebind.toml`; save it and edit what you need. Unset
-values appear as comments. [`rebind.example.toml`](../rebind.example.toml)
+The output is a complete `inkthaw.toml`; save it and edit what you need. Unset
+values appear as comments. [`inkthaw.example.toml`](../inkthaw.example.toml)
 has the commonly changed options.
 
 ## Profiles
 
 ```bash
-uv run rebind profiles
+uv run inkthaw profiles
 ```
 
 | Profile | For | Changes from the defaults |
@@ -53,7 +53,7 @@ optional parts run and how strict the report is. Things that need no profile:
 |---|---|---|
 | `profile` | `novel` | Preset, see above |
 | `dpi` | `300` | Rasterization resolution |
-| `engine` | `docling` | OCR/layout engine (`rebind engines` lists them) |
+| `engine` | `docling` | OCR/layout engine (`inkthaw engines` lists them) |
 | `device` | `auto` | `auto` (CUDA, then MPS, then CPU), `cpu`, `cuda`, `mps` |
 | `models_dir` | unset | Keep model weights here and run offline after the first download |
 

@@ -1,20 +1,20 @@
 # Writing an engine
 
-Engines are found through the `rebind.engines` entry-point group, so an engine
-can live in its own package and be installed next to rebind.
+Engines are found through the `inkthaw.engines` entry-point group, so an engine
+can live in its own package and be installed next to inkthaw.
 
 ## 1. Implement the protocol
 
-The protocol is in [`src/rebind/engines/base.py`](../src/rebind/engines/base.py).
+The protocol is in [`src/inkthaw/engines/base.py`](../src/inkthaw/engines/base.py).
 A complete, tested example is `EchoEngine` in
 [`tests/unit/test_engine_protocol.py`](../tests/unit/test_engine_protocol.py).
 
 ```python
 from pathlib import Path
 
-from rebind.config import Config
-from rebind.engines import Capabilities, EngineContext
-from rebind.ir import Block, BlockKind, BookIR, Page
+from inkthaw.config import Config
+from inkthaw.engines import Capabilities, EngineContext
+from inkthaw.ir import Block, BlockKind, BookIR, Page
 
 
 class MyEngine:
@@ -63,14 +63,14 @@ class MyEngine:
 In your package's `pyproject.toml`:
 
 ```toml
-[project.entry-points."rebind.engines"]
+[project.entry-points."inkthaw.engines"]
 myengine = "my_package.engine:MyEngine"
 ```
 
-Then `rebind engines` lists it and `engine = "myengine"` (or `--engine
+Then `inkthaw engines` lists it and `engine = "myengine"` (or `--engine
 myengine`) selects it.
 
-## 3. What rebind expects from the output
+## 3. What inkthaw expects from the output
 
 - **Reading order.** Blocks in the order a person reads them. Put a page's
   running header first and its footer last. The `reading_order` cleanup rule
@@ -107,5 +107,5 @@ for progress details.
 - Run the [benchmark](benchmarks.md) with `engine = "myengine"` and compare
   CER, paragraph F1 and the flagged-page counts with the default engine.
 - Run `scripts/check_licenses.py` in an environment with your engine
-  installed. Engines bundled with rebind must be permissively licensed,
+  installed. Engines bundled with inkthaw must be permissively licensed,
   weights included (PLAN.md §2).

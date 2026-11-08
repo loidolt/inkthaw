@@ -7,11 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from rebind import engines
-from rebind.config import Config
-from rebind.engines import Capabilities, Engine, EngineContext
-from rebind.engines.docling_engine import DoclingEngine
-from rebind.ir import Block, BlockKind, BookIR, Page
+from inkthaw import engines
+from inkthaw.config import Config
+from inkthaw.engines import Capabilities, Engine, EngineContext
+from inkthaw.engines.docling_engine import DoclingEngine
+from inkthaw.ir import Block, BlockKind, BookIR, Page
 
 
 class EchoEngine:

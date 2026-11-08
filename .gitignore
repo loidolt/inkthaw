@@ -11,13 +11,13 @@ dist/
 build/
 *.egg-info/
 
-# rebind working folders
+# inkthaw working folders
 /jobs/
 /out/
 /inbox/
 /outbox/
 /models/
-/rebind.toml
+/inkthaw.toml
 /tests/corpus/downloads/
 
 # OS / editors

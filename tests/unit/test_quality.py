@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from rebind.config import Config
-from rebind.imaging import write_png
-from rebind.ir import Block, BlockKind, BookIR, Page
-from rebind.quality import assess, dictionary_ratio, garbled_runs
+from inkthaw.config import Config
+from inkthaw.imaging import write_png
+from inkthaw.ir import Block, BlockKind, BookIR, Page
+from inkthaw.quality import assess, dictionary_ratio, garbled_runs
 
 K = BlockKind
 SENTENCE = "The lawyer walked slowly home through the quiet streets of London that evening. "

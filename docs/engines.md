@@ -1,12 +1,12 @@
 # Engines
 
-An engine turns cleaned page images into [BookIR](#bookir), rebind's
+An engine turns cleaned page images into [BookIR](#bookir), inkthaw's
 engine-neutral representation. Everything after the OCR stage (cleanup, build,
 the report) works on BookIR only, so engines can be swapped without touching
 the rest of the pipeline.
 
 ```bash
-uv run rebind engines    # installed engines, their status and capabilities
+uv run inkthaw engines    # installed engines, their status and capabilities
 ```
 
 ## Docling (default)
@@ -25,7 +25,7 @@ the `docling` extra (`uv sync --extra docling`; the Docker images include it).
   about 6.
 - **Model weights** (about 700 MB): downloaded on first use into Docling's and
   RapidOCR's own caches, or, with `models_dir` set, once into that folder;
-  after that the engine runs offline. `rebind models` downloads ahead of time.
+  after that the engine runs offline. `inkthaw models` downloads ahead of time.
 - **Per-page cache:** results are cached in `30_ir/cache/`, keyed by the page
   image and the OCR settings, so an interrupted run continues where it
   stopped and re-running later stages never repeats OCR.
@@ -46,7 +46,7 @@ anything else becomes `other`. Page confidence is Docling's per-page OCR score.
 
 ## Licensing rule
 
-Engines that ship with rebind must be permissively licensed, including their
+Engines that ship with inkthaw must be permissively licensed, including their
 model weights. `scripts/check_licenses.py` fails CI if an installed package
 has a copyleft, proprietary or unknown license that hasn't been reviewed. A
 third-party engine installed as a separate package is the user's choice and
@@ -54,7 +54,7 @@ is not bundled.
 
 ## BookIR
 
-Defined with Pydantic in [`src/rebind/ir.py`](../src/rebind/ir.py) and
+Defined with Pydantic in [`src/inkthaw/ir.py`](../src/inkthaw/ir.py) and
 versioned (`ir_version`, currently 1).
 
 ```text

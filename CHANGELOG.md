@@ -4,6 +4,15 @@
 
 ### Changed
 
+- **Renamed from rebind to inkthaw.** The package, the CLI command, the Python
+  import (`inkthaw`), the config file (`inkthaw.toml`), the environment
+  variables (`INKTHAW_MODELS_DIR`, `INKTHAW_REQUIRE_EPUBCHECK`, `INKTHAW_UID`,
+  `INKTHAW_GID`, `INKTHAW_IMAGE`, `INKTHAW_GPU_IMAGE`), the `inkthaw.engines`
+  entry-point group, the error class (`InkthawError`), the Compose services and
+  the models marker (`.inkthaw-models.json`) all changed. Rename an existing
+  `rebind.toml` to `inkthaw.toml` and `.rebind-models.json` in your models
+  folder to `.inkthaw-models.json` (or the models download again). Old job
+  manifests still load; their `rebind_version` field is ignored.
 - PDFs are read and rendered in-process with PDFium (`pypdfium2`); poppler
   (`pdfinfo`, `pdfimages`, `pdftotext`, `pdftoppm`) is no longer needed.
 - New built-in preprocess backend (numpy + Pillow): dark-border removal,
@@ -14,7 +23,7 @@
 - EPUBCheck is optional: without it (or without a working Java runtime) the
   EPUB is still built and the report says validation was skipped.
   `validate.require_epubcheck = true` restores the old hard requirement.
-- The EPUB is written in-process by a native EPUB 3 writer (`rebind.epub`,
+- The EPUB is written in-process by a native EPUB 3 writer (`inkthaw.epub`,
   standard library + Pillow): chapters split at `build.split_level`,
   `nav.xhtml` and `toc.ncx` honouring `build.toc_depth`, OPF metadata, cover
   page, bundled and extra CSS, EPUB 3 pop-up footnotes, tables, figures and
@@ -22,7 +31,7 @@
   the old path for anyone who wants it. Note numbers are sequential through
   the book, as with pandoc; the material before the first heading no longer
   gets the book title as an extra heading (the title page carries it).
-- `rebind doctor` lists the built-in libraries; no external tool is required
+- `inkthaw doctor` lists the built-in libraries; no external tool is required
   any more. The Docker images no longer install poppler, unpaper or pandoc.
 - The ingest, rasterize, preprocess, build and validate stage versions changed, so
   existing jobs re-run from ingest once (OCR results stay cached per page
@@ -41,7 +50,7 @@ First release.
 
 ### Pipeline
 
-- `rebind run book.pdf`: ingest, rasterize (spread splitting), preprocess
+- `inkthaw run book.pdf`: ingest, rasterize (spread splitting), preprocess
   (unpaper), OCR (Docling), cleanup, build (Pandoc, EPUB 3), validate
   (EPUBCheck). Every stage writes its own folder in `jobs/<slug>/`; unchanged
   stages are skipped, `--from` / `--to` re-run part of the pipeline, and OCR
@@ -52,16 +61,16 @@ First release.
   cross-column paragraph merging, EPUB 3 footnotes, chapter structure, front
   matter and scanned-contents removal.
 - Quality report (`report.html`): flagged pages shown next to their text, with
-  a 0–100 score. `rebind report <job> --open`.
+  a 0–100 score. `inkthaw report <job> --open`.
 - Profiles: `novel`, `nonfiction`, `academic`, `two-column`.
-  `rebind profiles`, `rebind config`.
+  `inkthaw profiles`, `inkthaw config`.
 
 ### Running it
 
-- `rebind watch` watch-folder mode with per-book sidecar settings.
+- `inkthaw watch` watch-folder mode with per-book sidecar settings.
 - Docker images (CPU: amd64 and arm64; NVIDIA CUDA: amd64) and `compose.yml`.
-- `rebind models` and `models_dir` for offline use; `rebind doctor`,
-  `rebind engines`.
+- `inkthaw models` and `models_dir` for offline use; `inkthaw doctor`,
+  `inkthaw engines`.
 
 ### Quality
 
