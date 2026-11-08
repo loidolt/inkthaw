@@ -202,5 +202,225 @@
    "output": 366,
    "ground_truth": 349
   }
+ },
+ {
+  "id": "jekyll-hyde",
+  "label": "M5 baseline: poppler + unpaper (before changes)",
+  "date": "2026-11-08T19:14:43+00:00",
+  "rebind_version": "0.1.0",
+  "git_commit": "d776da6",
+  "engine": "docling",
+  "engine_version": "2.149.0",
+  "settings": {
+   "dpi": 300,
+   "preprocess": {
+    "raster_mode": "render",
+    "color": "gray",
+    "split_spreads": true,
+    "spread_min_aspect": 1.1,
+    "spread_order": "ltr",
+    "unpaper": true,
+    "unpaper_args": [
+     "--no-grayfilter"
+    ],
+    "binarize": false,
+    "workers": null
+   },
+   "ocr": {
+    "languages": [],
+    "docling_ocr": "rapidocr",
+    "rapidocr_backend": "torch",
+    "rapidocr_params": {
+     "Det.box_thresh": 0.3
+    },
+    "tables": false,
+    "pictures": true
+   }
+  },
+  "scores": {
+   "cer": 0.0166,
+   "wer": 0.0263,
+   "paragraph_precision": 0.9422,
+   "paragraph_recall": 0.9819,
+   "paragraph_f1": 0.9617,
+   "header_leaks": 1,
+   "hyp_chars": 137127,
+   "ref_chars": 138078
+  },
+  "quality_score": 90.6,
+  "flagged_pages": 37,
+  "paragraphs": {
+   "output": 366,
+   "ground_truth": 349
+  }
+ },
+ {
+  "id": "jekyll-hyde",
+  "label": "M5 default: PDFium raster + builtin preprocess (borders, despeckle, deskew, mask/centre, soften), no poppler/unpaper",
+  "date": "2026-11-08T21:52:01+00:00",
+  "rebind_version": "0.1.0",
+  "git_commit": "1d8676c",
+  "engine": "docling",
+  "engine_version": "2.149.0",
+  "settings": {
+   "dpi": 300,
+   "preprocess": {
+    "raster_mode": "render",
+    "color": "gray",
+    "split_spreads": true,
+    "spread_min_aspect": 1.1,
+    "spread_order": "ltr",
+    "backend": "builtin",
+    "remove_borders": true,
+    "despeckle": 4,
+    "mask_content": true,
+    "soften": true,
+    "deskew": true,
+    "deskew_max_angle": 2.0,
+    "unpaper_args": [
+     "--no-grayfilter"
+    ],
+    "binarize": false,
+    "workers": null
+   },
+   "ocr": {
+    "languages": [],
+    "docling_ocr": "rapidocr",
+    "rapidocr_backend": "torch",
+    "rapidocr_params": {
+     "Det.box_thresh": 0.3
+    },
+    "tables": false,
+    "pictures": true
+   }
+  },
+  "scores": {
+   "cer": 0.0182,
+   "wer": 0.028,
+   "paragraph_precision": 0.9503,
+   "paragraph_recall": 0.9819,
+   "paragraph_f1": 0.9658,
+   "header_leaks": 0,
+   "hyp_chars": 136845,
+   "ref_chars": 138078
+  },
+  "quality_score": 92.2,
+  "flagged_pages": 31,
+  "paragraphs": {
+   "output": 361,
+   "ground_truth": 349
+  }
+ },
+ {
+  "id": "jekyll-hyde",
+  "label": "M5 variant: PDFium raster + unpaper (page images swapped in, re-run from OCR)",
+  "date": "2026-11-08T21:52:09+00:00",
+  "rebind_version": "0.1.0",
+  "git_commit": "1d8676c",
+  "engine": "docling",
+  "engine_version": "2.149.0",
+  "settings": {
+   "dpi": 300,
+   "preprocess": {
+    "raster_mode": "render",
+    "color": "gray",
+    "split_spreads": true,
+    "spread_min_aspect": 1.1,
+    "spread_order": "ltr",
+    "backend": "builtin",
+    "remove_borders": true,
+    "despeckle": 4,
+    "deskew": true,
+    "deskew_max_angle": 2.0,
+    "unpaper_args": [
+     "--no-grayfilter"
+    ],
+    "binarize": false,
+    "workers": null
+   },
+   "ocr": {
+    "languages": [],
+    "docling_ocr": "rapidocr",
+    "rapidocr_backend": "torch",
+    "rapidocr_params": {
+     "Det.box_thresh": 0.3
+    },
+    "tables": false,
+    "pictures": true
+   }
+  },
+  "scores": {
+   "cer": 0.0189,
+   "wer": 0.029,
+   "paragraph_precision": 0.9446,
+   "paragraph_recall": 0.9789,
+   "paragraph_f1": 0.9614,
+   "header_leaks": 0,
+   "hyp_chars": 136837,
+   "ref_chars": 138078
+  },
+  "quality_score": 91.0,
+  "flagged_pages": 36,
+  "paragraphs": {
+   "output": 363,
+   "ground_truth": 349
+  }
+ },
+ {
+  "id": "jekyll-hyde",
+  "label": "M5 variant (not adopted): PDFium raster darkened with gamma 1.6 + builtin",
+  "date": "2026-11-08T21:52:16+00:00",
+  "rebind_version": "0.1.0",
+  "git_commit": "1d8676c",
+  "engine": "docling",
+  "engine_version": "2.149.0",
+  "settings": {
+   "dpi": 300,
+   "preprocess": {
+    "raster_mode": "render",
+    "color": "gray",
+    "split_spreads": true,
+    "spread_min_aspect": 1.1,
+    "spread_order": "ltr",
+    "backend": "builtin",
+    "remove_borders": true,
+    "despeckle": 4,
+    "mask_content": true,
+    "soften": true,
+    "deskew": true,
+    "deskew_max_angle": 2.0,
+    "unpaper_args": [
+     "--no-grayfilter"
+    ],
+    "binarize": false,
+    "workers": null
+   },
+   "ocr": {
+    "languages": [],
+    "docling_ocr": "rapidocr",
+    "rapidocr_backend": "torch",
+    "rapidocr_params": {
+     "Det.box_thresh": 0.3
+    },
+    "tables": false,
+    "pictures": true
+   }
+  },
+  "scores": {
+   "cer": 0.0175,
+   "wer": 0.0268,
+   "paragraph_precision": 0.9353,
+   "paragraph_recall": 0.9815,
+   "paragraph_f1": 0.9578,
+   "header_leaks": 0,
+   "hyp_chars": 137035,
+   "ref_chars": 138078
+  },
+  "quality_score": 92.8,
+  "flagged_pages": 29,
+  "paragraphs": {
+   "output": 364,
+   "ground_truth": 349
+  }
  }
 ]

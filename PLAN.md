@@ -90,9 +90,9 @@ Define it with Pydantic v2 and version the schema (`ir_version`).
 
 ### 4.2 preprocess
 
-- Rasterize with `pdftoppm` at 300 dpi by default (configurable), or extract the native images with `pdfimages` when they are already at book resolution.
+- Rasterize with PDFium (`pypdfium2`) at 300 dpi by default (configurable), or extract the native images when they are already at book resolution. (Poppler's `pdftoppm`/`pdfimages` until M5.)
 - Spread detection: if a page's aspect ratio is about 2× portrait, split it into two pages.
-- unpaper: deskew, remove dark scan borders, despeckle, normalize margins.
+- Clean-up: deskew, remove dark scan borders, despeckle. Built in (numpy + Pillow) since M5; unpaper remains an optional backend.
 - Optional binarization/contrast step (off by default; some engines prefer grayscale).
 - Design this as a sub-pipeline of small ops, so a ScanTailor-fork CLI can be added later as an alternate backend.
 
@@ -125,7 +125,7 @@ Each rule is a separate, unit-tested function `IR -> IR` that can be switched on
 
 ### 4.6 validate and report
 
-- Run `epubcheck`. Errors fail the job; warnings go in the report.
+- Run `epubcheck` when it and Java are installed (skipped with a note in the report otherwise, M5). Errors fail the job; warnings go in the report.
 - Quality flags for each page:
   - Low mean OCR confidence (when available).
   - Character count far off the book median (missed or duplicated text).
@@ -166,14 +166,15 @@ rebind run book.pdf [--profile novel] [--title ... --author ...] [--from cleanup
 rebind watch ./inbox --out ./outbox        # watch-folder mode for Docker
 rebind report jobs/<slug>                  # rebuild/open the HTML report
 rebind engines                             # list installed engines + devices
-rebind doctor                              # check external tools (pandoc, unpaper, epubcheck, poppler)
+rebind doctor                              # check libraries and external tools (pandoc; optional epubcheck, unpaper)
 rebind serve [--host ...] [--port ...]     # HTTP API + web UI (M6/M7)
 ```
 
 ## 7. Tech stack
 
 - Python 3.12, `uv` for env and deps, `typer` (CLI), `pydantic` v2, `rich` (progress output).
-- External tools: poppler-utils, unpaper, pandoc, epubcheck (needs a Java runtime).
+- PDF and images in-process: `pypdfium2` (PDFium), Pillow, numpy (M5).
+- External tools: pandoc (required); epubcheck with a Java runtime and unpaper (optional).
 - Docling (default engine). `wordfreq` for the dictionary checks.
 - Quality tooling: `ruff`, `pyright`, `pytest`, `pytest-cov`.
 - Server (M6): FastAPI, SQLite for the job queue and state.
@@ -210,7 +211,7 @@ rebind/
 
 ### Docker
 
-- `Dockerfile.cpu`: `python:3.12-slim` plus poppler-utils, unpaper, pandoc and a headless JRE (for epubcheck). Multi-arch (amd64 and arm64).
+- `Dockerfile.cpu`: `python:3.12-slim` plus pandoc and a headless JRE with epubcheck (poppler and unpaper dropped in M5). Multi-arch (amd64 and arm64).
 - `Dockerfile.cuda`: NVIDIA CUDA runtime base, same tools.
 - `compose.yml`: one `rebind watch` service with `inbox/`, `outbox/`, `jobs/` and `models/` volumes, plus a GPU profile.
 - Publish to GHCR on tagged releases.
@@ -326,6 +327,9 @@ rebind a book they own. It is likely the main reason to have a mobile app.
 
 ### M5 — Fewer external tools, easy install
 
+Status: done except publishing (draft PyPI job and Homebrew formula; see the
+M5 decisions in §13).
+
 - Replace poppler (`pdfinfo`, `pdfimages`, `pdftoppm`) with `pypdfium2` (Apache-2.0/BSD-3, wheels for
   every platform).
 - Replace unpaper with in-process deskew, border removal and despeckle (OpenCV or equivalent,
@@ -391,8 +395,9 @@ rebind a book they own. It is likely the main reason to have a mobile app.
 - Apple Silicon: MPS works natively at about 3 s/page (`docs/engines.md`). Still open: does Apple
   Vision OCR (`ocrmac`) beat pinned RapidOCR on the corpus, and is it worth giving up identical output
   across platforms on Macs?
-- unpaper replacement: can in-process preprocessing match unpaper's CER on the corpus?
-- pandoc: bundle the binary, or write EPUB 3 directly from BookIR?
+- ~~unpaper replacement: can in-process preprocessing match unpaper's CER on the corpus?~~ Settled in M5 (§13).
+- ~~pandoc: bundle the binary, or write EPUB 3 directly from BookIR?~~ Settled in M5: write EPUB 3
+  directly, before M8 (§13).
 - Python sidecar freezer: PyInstaller or Briefcase? Watch bundle size (torch alone is about 400 MB on
   macOS arm64) and signing/notarization of the bundled native libraries.
 - Windows ML runtime: CPU torch with an optional CUDA download (the CUDA build is about 2.5 GB), or
@@ -422,7 +427,8 @@ Decisions made while building, recorded so the plan stays the source of truth.
   ["--no-grayfilter"]`). On gray-paper scans it whitened patches between text
   lines and garbled OCR of whole lines.
 - **No imaging dependency in the core.** unpaper writes only PNM; a small
-  stdlib PNM→PNG converter (`imaging.py`) avoids adding Pillow.
+  stdlib PNM→PNG converter (`imaging.py`) avoids adding Pillow. *(Superseded in
+  M5: Pillow and numpy are core dependencies now; see M5 decisions.)*
 - **Linux dev/CI uses CPU-only torch wheels** via `[tool.uv.sources]`; the CUDA
   image (M3) installs CUDA wheels itself.
 - **Known Docling limitation (fixture page 1):** the first line next to a
@@ -510,3 +516,77 @@ Decisions made while building, recorded so the plan stays the source of truth.
 - **Removed** the unused `ocr.page_batch` option.
 - **Release:** version 0.1.0, tag `v0.1.0`. Pushing the tag runs
   `release.yml` (GHCR images and a GitHub release).
+
+### M5 decisions
+
+- **PDF access: pypdfium2 (PDFium).** Apache-2.0 / BSD-3-Clause, wheels for
+  Linux, macOS, Windows, iOS and Android builds exist, and its bundled
+  libraries are all permissive. It replaces `pdfinfo`, `pdfimages`,
+  `pdftotext` and `pdftoppm` (and `pdfseparate`/`pdfunite` in the corpus
+  script). PDFium is not thread-safe, so calls hold one process-wide lock;
+  rendering is ~40 ms a page, PNG encoding runs outside the lock. PDFium
+  reports page sizes after `/Rotate`; `pdf.inspect` swaps them back so
+  `info.json` keeps poppler's meaning. PDFium's default rendering options
+  are used.
+- **Preprocessing: numpy + Pillow, not OpenCV.** This revisits "no imaging
+  dependency in the core": Pillow (MIT-CMU) and numpy (BSD) are now core
+  dependencies (~35 MB of wheels), and Docling already pulls both. OpenCV was
+  rejected: `opencv-python-headless` is Apache-2.0, but its wheels are 120 MB
+  and bundle FFmpeg, and the macOS arm64 wheel's FFmpeg is built with
+  `--enable-gpl` (x264/x265), so it could not go into an app bundle (§2).
+  scipy was not needed either; the few operations (block means, box sums,
+  projection profiles) are plain numpy.
+- **Built-in backend steps, in order:** dark-border removal (dense regions
+  grown from the page edge on a ~0.7 mm grid), despeckle (≤ 4 dark pixels with
+  clean paper around them), deskew (projection-profile search ±2°, only when
+  the page has a clear text-line peak, so stamps and pictures are left alone),
+  mask and centre the main text area, and `soften` (bicubic quarter-pixel
+  resample). The last two came from measuring what unpaper does that helps
+  Docling: centring stops Docling from splitting paragraphs at their last line,
+  and unpaper's near-universal resampling anti-aliases bitonal scans, which
+  RapidOCR reads better. Each step has a switch in `[preprocess]`.
+- **Corpus result:** CER 1.82% with the M5 defaults against 1.66% for the
+  poppler + unpaper baseline re-run on the same machine; paragraph F1 0.966
+  (was 0.962), no header leaks (was 1), 31 flagged pages (was 37). unpaper on
+  PDFium pages scores 1.89%, so the built-in backend is not behind unpaper;
+  the remaining gap is the rasterizer (poppler draws slightly heavier strokes)
+  and is about four garbled lines on this book (darkening PDFium's output
+  closed half of it, 1.75%, at a cost in paragraph F1; not adopted on one
+  book's evidence). Accepted for M5 because
+  dropping poppler is what makes wheel-only installs and app bundles possible;
+  a second corpus book should confirm it (docs/benchmarks.md has every run).
+- **unpaper stays an optional backend** (`preprocess.backend = "unpaper"`).
+  The old `preprocess.unpaper = false` still loads and means `backend =
+  "none"`; `unpaper = true` now means the built-in backend.
+- **EPUBCheck is optional.** It runs when `epubcheck` is on PATH and `java
+  -version` works (macOS's `/usr/bin/java` stub does not count). Otherwise the
+  report records `"skipped": true` with the reason and the stage warns.
+  `validate.require_epubcheck = true` makes it mandatory; CI sets
+  `REBIND_REQUIRE_EPUBCHECK=1` for the integration test so validation is never
+  silently skipped there.
+- **pandoc: write EPUB 3 directly from BookIR, before M8; keep pandoc for
+  now.** Bundling pandoc is ruled out for the desktop and iOS apps (GPL, §2),
+  so the apps need a native writer regardless, and once it exists bundling
+  pandoc buys nothing for the CLI either. The writer is not a quick swap:
+  chapter splitting, `nav.xhtml` with the TOC depth, OPF metadata, cover,
+  EPUB 3 footnotes, tables and images, all validated with EPUBCheck and
+  checked against the corpus. That is its own piece of work, so M5 keeps
+  pandoc as the one required external tool for CLI and Docker users.
+- **Licence check covers bundled native code.** `scripts/check_licenses.py`
+  now lists permissive wheels that bundle copyleft native libraries
+  (`opencv-python-headless`, pulled in by RapidOCR) as warnings, and `--app`
+  fails on them. M8 has to replace or strip that wheel before the Python
+  sidecar can ship.
+- **Packaging.** `release.yml` gains a draft PyPI job (trusted publishing,
+  gated on the repository variable `PYPI_PUBLISH`); the name `rebind` was free
+  on PyPI on 2026-11-08. `packaging/homebrew/rebind.rb` is a draft tap formula
+  that pip-installs `rebind[docling]` into a virtualenv (resource blocks for
+  ~120 packages including torch are not practical); homebrew-core would need a
+  Docling-free package first. On Linux, PyPI's torch is the CUDA build, so the
+  Docker CPU image stays the light option there. CI gains a `wheel` job that
+  runs the built wheel on Linux and macOS with no external tools.
+- **Not verified here:** the `uvx --from 'rebind[docling]' rebind run` path on
+  a clean Mac (nothing is on PyPI yet); the built wheel was run with only
+  `/usr/bin:/bin` on PATH up to the preprocess stage, and the full pipeline
+  with only pandoc, EPUBCheck and Java on PATH (integration test, MPS for the
+  corpus run).
