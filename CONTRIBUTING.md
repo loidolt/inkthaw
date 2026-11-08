@@ -53,7 +53,7 @@ the first run downloads the models.
 - `src/rebind/quality.py`, `report.py`: page flags and `report.html`.
 - `src/rebind/metrics.py`, `scripts/corpus.py`: the ground-truth benchmark.
 
-[PLAN.md](PLAN.md) has the design; its §12 records decisions made since.
+[PLAN.md](PLAN.md) has the design; its §13 records decisions made since.
 
 ## Adding or changing a cleanup rule
 

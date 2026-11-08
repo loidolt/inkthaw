@@ -13,10 +13,13 @@ Repo name: `rebind` (a scanned book, taken apart and rebound as an ebook).
 - Every stage is resumable and inspectable, and intermediate files are kept.
 - The OCR/layout engine is pluggable. The default engine has a permissive license.
 - Quality is measured, not guessed: regression tests against public-domain ground truth.
+- Usable without knowing Docker or a terminal: native desktop apps (macOS, then Windows) that use the
+  machine's own hardware, and mobile companion apps (iOS, then Android). See §10.
 
 ### Non-goals (for now)
 
-- Web UI and job queue (planned for v1, see §10).
+- A hosted conversion service. rebind stays self-hosted: books never leave the user's own machines.
+- Running the OCR pipeline on phones. Mobile apps are clients of the user's own rebind server (§10.5).
 - DRM, ebook stores, or anything aimed at copyrighted material the user doesn't own.
 - Perfect output on every book with no review. The aim is to make review fast.
 
@@ -25,6 +28,9 @@ Repo name: `rebind` (a scanned book, taken apart and rebound as an ebook).
 - Project license: Apache-2.0.
 - Bundled engines must be permissively licensed. Default engine: Docling (MIT). Planned optional engine: olmOCR (Apache-2.0).
 - marker (GPL code, model weights with restrictions) and MinerU (verify current license) are never bundled. They may be supported later as separately installed plugins only.
+- Nothing GPL ships inside the desktop or mobile app bundles. GPL terms conflict with App Store
+  distribution, and every bundled GPL binary carries a source-offer obligation. GPL tools may still be
+  used when the user installs them separately (as Calibre is today).
 - Keep `THIRD_PARTY_LICENSES.md` up to date for every bundled dependency and model.
 - Test fixtures come only from public-domain sources (Internet Archive scans, Project Gutenberg texts).
 
@@ -161,6 +167,7 @@ rebind watch ./inbox --out ./outbox        # watch-folder mode for Docker
 rebind report jobs/<slug>                  # rebuild/open the HTML report
 rebind engines                             # list installed engines + devices
 rebind doctor                              # check external tools (pandoc, unpaper, epubcheck, poppler)
+rebind serve [--host ...] [--port ...]     # HTTP API + web UI (M6/M7)
 ```
 
 ## 7. Tech stack
@@ -169,6 +176,9 @@ rebind doctor                              # check external tools (pandoc, unpap
 - External tools: poppler-utils, unpaper, pandoc, epubcheck (needs a Java runtime).
 - Docling (default engine). `wordfreq` for the dictionary checks.
 - Quality tooling: `ruff`, `pyright`, `pytest`, `pytest-cov`.
+- Server (M6): FastAPI, SQLite for the job queue and state.
+- UI (M7 on): SvelteKit (static build) on [loidolt-theme](https://theme.loidolt.space)
+  (`@loidolt/theme-svelte`); Tauri 2 for desktop, Capacitor for mobile (§10).
 
 ## 8. Repo layout
 
@@ -181,7 +191,11 @@ rebind/
     stages/ ingest.py preprocess.py ocr.py cleanup/ build.py validate.py report.py
     stages/cleanup/ furniture.py headers.py hyphenation.py paragraphs.py typography.py footnotes.py chapters.py
     engines/ base.py docling_engine.py
+    server/                    # FastAPI app, job queue, pairing (M6, M8)
     assets/ epub.css report.html.j2
+  app/                         # SvelteKit UI (M7)
+    src-tauri/                 # desktop shell + Python sidecar config (M8)
+    ios/  android/             # Capacitor projects (M9, M10)
   tests/
     unit/                      # cleanup rules on synthetic IR
     integration/               # tiny 5-page PDF end-to-end
@@ -214,7 +228,77 @@ rebind/
 - Corpus targets: a plain novel, a footnote-heavy nonfiction book, a book with tables, a two-column book, and one poor-quality scan.
 - The corpus manifest stores source URLs and checksums only. A script downloads the files, so no large binaries go in git.
 
-## 10. Milestones
+## 10. Distribution and apps
+
+### 10.1 Why native apps
+
+Docker asks users to understand containers, volumes and UIDs, and on macOS it costs speed: Docker
+Desktop runs a Linux VM with no Metal access, so Docling falls back to CPU. Natively on an Apple
+M-series Mac a page takes about 3 seconds; in a 2-CPU container about 6 (`docs/engines.md`). Native
+also opens up Apple Vision OCR (`ocrmac`, already an option) on the Neural Engine. On Windows, Docker
+Desktop with WSL2 does pass CUDA through, so a native Windows app is about ease of install more than
+speed.
+
+### 10.2 Ways to run rebind
+
+| Surface | For | Backend | Ships |
+|---|---|---|---|
+| CLI (`uvx rebind`, `pipx`, Homebrew) | technical users, scripts | local Python | M5 |
+| Docker (watch folder, `rebind serve`) | NAS and server self-hosters | container | M3, web UI from M7 |
+| Desktop app (macOS, then Windows) | everyone else | bundled Python sidecar | M8, M10 |
+| Mobile app (iOS, then Android) | capture and review on the go | the user's desktop app or Docker server | M9, M10 |
+
+Docker stays: it is the right fit for always-on home servers. The apps do not replace it.
+
+### 10.3 One UI, one API
+
+```
+SvelteKit static build (@loidolt/theme-svelte)
+  ├── browser                       ── served by rebind serve (CLI / Docker) ──┐
+  ├── Tauri 2 (macOS / Windows)     ── local Python sidecar ───────────────────┼──► FastAPI /api/v1
+  └── Capacitor (iOS / Android)     ── paired server over LAN / Tailscale ─────┘
+```
+
+- The versioned HTTP API (`/api/v1`, OpenAPI) is the contract. The web UI, desktop app and mobile app
+  all speak it the same way; the CLI keeps calling the pipeline directly.
+- Single-user, local-first: an in-process job queue on SQLite instead of the Redis + RQ queue the plan
+  used to call for. A separate queue can come later if multi-worker servers need it.
+- Token auth from the start, because mobile clients connect over the network.
+
+### 10.4 Shells and the theme
+
+- **UI kit:** [loidolt-theme](https://theme.loidolt.space) (MIT; fonts Jost and Archivo, OFL). Its
+  inspector layout, lightbox and drawer suit the review screen (page image beside editable text).
+- **Mobile shell: Capacitor.** `@loidolt/theme-capacitor` already handles system bars, the Android back
+  button, keyboard, haptics, safe areas and deep links.
+- **Desktop shell: Tauri 2.** Capacitor has no first-party desktop target. Tauri gives small binaries,
+  a sidecar for the frozen Python backend, and an updater. Tauri's mobile targets are not used: the
+  theme's Capacitor work already covers mobile.
+- **New theme package `@loidolt/theme-tauri`**, built in the loidolt-theme repo alongside M8, on the
+  same pattern as the Capacitor one (plugins passed in, inert in a browser, no rebind-specific code):
+  overlay title bar clear of the macOS window buttons (via the `--ldt-safe-*` knobs) and drag regions
+  on `Topbar`; window background and appearance following the system theme (no white flash); native
+  menu bar wired to app commands and shortcuts; native file dialogs and file drop onto the window; OS
+  notifications; single instance, deep links, and an optional tray icon for watch mode.
+- **Stays in rebind, not the theme:** the document-scanner plugin (VisionKit on iOS, ML Kit on
+  Android), device pairing (QR code with a token, mDNS discovery), and the API client. Generic native
+  pieces (share sheet, file picker) go to the theme.
+
+### 10.5 Mobile: what was considered
+
+- **Companion client (chosen).** The phone captures pages, uploads them to the user's own server,
+  shows progress, supports review, and sends the EPUB to Books or Play Books. Reuses the UI and API.
+- **On-device "lite" pipeline (maybe later).** Native OCR (Apple Vision, ML Kit) plus a port of cleanup
+  and EPUB build. Docling, the quality advantage, is Python + torch and has no iOS or Android build,
+  so this means a second implementation of the pipeline. Phones also kill long background jobs; a
+  300-page book at about 3 s/page is around 15 minutes.
+- **Hosted cloud (rejected).** Server costs, and users uploading copyrighted books to our servers would
+  make us a host with takedown and liability exposure. Self-hosting avoids that.
+
+Camera capture (VisionKit / ML Kit document scanner producing a PDF) lets people without a scanner
+rebind a book they own. It is likely the main reason to have a mobile app.
+
+## 11. Milestones
 
 ### M0 — Scaffold
 
@@ -240,19 +324,85 @@ rebind/
 
 - Profiles, docs, CONTRIBUTING guide, THIRD_PARTY_LICENSES, and a tagged release.
 
+### M5 — Fewer external tools, easy install
+
+- Replace poppler (`pdfinfo`, `pdfimages`, `pdftoppm`) with `pypdfium2` (Apache-2.0/BSD-3, wheels for
+  every platform).
+- Replace unpaper with in-process deskew, border removal and despeckle (OpenCV or equivalent,
+  permissive license); keep unpaper as an optional backend for users who install it. This revisits
+  the "no imaging dependency in the core" decision (§13).
+- pandoc: bundle the static binary in app builds only if a native EPUB writer is not simpler (open
+  question, §12). pandoc is GPL, so it cannot go in the iOS build either way.
+- epubcheck becomes optional: run when Java + EPUBCheck are found, otherwise skip with a note in the
+  report. App builds may bundle a trimmed `jlink` runtime later.
+- Publish to PyPI (`uvx rebind`, `pipx install rebind`) and add a Homebrew formula.
+- Done when: `uvx --from 'rebind[docling]' rebind run book.pdf` works on a clean Mac with nothing from
+  Homebrew, uses MPS, and the corpus CER does not get worse.
+
+### M6 — Server and API
+
+- `rebind serve`: FastAPI with a versioned OpenAPI contract (`/api/v1`), token auth, upload, per-job
+  progress events (SSE), job artifacts (EPUB, report, page images, IR), and rebuild after edits.
+- In-process job queue on SQLite; the watch folder feeds the same queue.
+- Done when: a job submitted over the API produces the same job folder as `rebind run`, and API
+  contract tests run in CI.
+
+### M7 — Web UI
+
+- SvelteKit static build on `@loidolt/theme-svelte`, served by `rebind serve` and in the Docker images:
+  upload, queue and progress, the quality report, and a review screen (page image beside editable text,
+  rebuild on save).
+- Add the theme and its fonts to `THIRD_PARTY_LICENSES.md`.
+- Done when: a book can be converted, reviewed, fixed and rebuilt entirely in the browser, and the
+  axe accessibility checks pass.
+
+### M8 — macOS app
+
+- Tauri 2 shell around the M7 UI, with the Python backend frozen as a sidecar. Apple Silicon (arm64)
+  only; signed, notarized DMG; auto-updates; model weights downloaded on first launch.
+- Acts as the home server for phones: listens on the LAN, mDNS discovery, QR-code pairing.
+- `@loidolt/theme-tauri` built in the loidolt-theme repo alongside (§10.4).
+- Done when: on a clean Mac with no Homebrew or Python, dragging a PDF onto the window produces an
+  EPUB using MPS, and a second device can pair.
+
+### M9 — iOS companion
+
+- Capacitor app on the M7 UI with `@loidolt/theme-capacitor`. Pairs with the desktop app or a Docker
+  server; camera capture with VisionKit into a PDF; upload, progress, review; share the EPUB to Books.
+- Done when: a TestFlight build converts a phone-captured chapter through a paired Mac.
+
+### M10 — Windows and Android
+
+- Windows Tauri build (ML runtime per §12) and an Android Capacitor build with the ML Kit document
+  scanner. Mostly packaging once the shells exist.
+
 ### Later
 
-- v1: FastAPI backend, Redis + RQ job queue, web UI with upload, progress, and a review screen (page image beside editable text, rebuild on save).
-- v2: olmOCR engine, ISBN metadata lookup (Open Library), OPDS feed and Calibre library output, optional LLM cleanup pass against any OpenAI-compatible endpoint (local or remote), and plugin docs for third-party engines.
+- On-device "lite" pipeline for phones, only if users ask for it (§10.5).
+- olmOCR engine, ISBN metadata lookup (Open Library), OPDS feed and Calibre library output, optional
+  LLM cleanup pass against any OpenAI-compatible endpoint (local or remote), and plugin docs for
+  third-party engines.
 
-## 11. Open questions
+## 12. Open questions
 
 - Default DPI and binarization: tune these against the corpus in M2.
 - Equations: keep as images, or convert to MathML when the engine gives LaTeX?
 - Non-English books: language detection for hyphenation dictionaries and typography rules.
-- Apple Silicon: confirm Docling's MPS support performs well enough natively.
+- Apple Silicon: MPS works natively at about 3 s/page (`docs/engines.md`). Still open: does Apple
+  Vision OCR (`ocrmac`) beat pinned RapidOCR on the corpus, and is it worth giving up identical output
+  across platforms on Macs?
+- unpaper replacement: can in-process preprocessing match unpaper's CER on the corpus?
+- pandoc: bundle the binary, or write EPUB 3 directly from BookIR?
+- Python sidecar freezer: PyInstaller or Briefcase? Watch bundle size (torch alone is about 400 MB on
+  macOS arm64) and signing/notarization of the bundled native libraries.
+- Windows ML runtime: CPU torch with an optional CUDA download (the CUDA build is about 2.5 GB), or
+  move inference to ONNX Runtime (DirectML covers AMD and Intel GPUs too)?
+- LAN pairing and TLS: self-signed certificate pinned at pairing time, or plain HTTP limited to the
+  local network plus token? iOS needs the local-network permission prompt either way.
+- Signing costs and accounts: Apple Developer Program, and a Windows code-signing route (Azure
+  Trusted Signing is the cheap option).
 
-## 12. Implementation notes and decisions
+## 13. Implementation notes and decisions
 
 Decisions made while building, recorded so the plan stays the source of truth.
 
