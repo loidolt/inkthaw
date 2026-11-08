@@ -1,0 +1,47 @@
+# rebind configuration. Copy to rebind.toml (picked up from the current
+# directory) or pass with --config. CLI flags override this file; this file
+# overrides the profile preset. Every key is optional.
+
+profile = "novel"          # novel | nonfiction | academic | two-column
+dpi = 300
+engine = "docling"
+device = "auto"            # auto | cpu | cuda | mps
+# models_dir = "./models"  # cache for engine model weights
+
+[metadata]
+# title = "The Book"
+# authors = ["Jane Author"]
+language = "en"
+# isbn = "9780000000000"
+# publisher = "..."
+# date = "1902"
+# cover = "cover.jpg"      # default: first page of the scan
+
+[preprocess]
+raster_mode = "render"     # render | extract (use the embedded scan image when possible)
+color = "gray"             # gray | color
+split_spreads = true
+spread_min_aspect = 1.1
+spread_order = "ltr"       # ltr | rtl
+unpaper = true
+unpaper_args = ["--no-grayfilter"]
+
+[ocr]
+# languages = ["en"]       # default: metadata.language
+docling_ocr = "auto"       # auto | easyocr | rapidocr | tesseract | ocrmac
+# tables = false           # set by the profile
+pictures = true
+
+[cleanup]
+drop_furniture = true
+running_header_threshold = 0.3
+hyphenation = true
+
+[build]
+toc_depth = 2
+split_level = 1
+# css = "extra.css"
+
+[validate]
+epubcheck = true
+fail_on_error = true

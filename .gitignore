@@ -1,0 +1,26 @@
+# Python / uv
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# rebind working folders
+/jobs/
+/out/
+/inbox/
+/outbox/
+/models/
+/rebind.toml
+/tests/corpus/downloads/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
