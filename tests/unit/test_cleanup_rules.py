@@ -204,6 +204,10 @@ def test_headers_leaves_rare_repeats() -> None:
         ),
         ("the Joneses' house", "the Joneses’ house"),
         ('""I was coming home', "“I was coming home"),
+        # old-style quotes read as 66/99 by OCR
+        ("66 Did you ever remark that door?", "“Did you ever remark that door?"),
+        ("added he, 66 with a very odd story. 99", "added he, “with a very odd story.”"),
+        ("at 66 Gaunt Street in 1866, 99 men", "at 66 Gaunt Street in 1866, 99 men"),
         ("soft­hyphen gone, zero​width", "softhyphen gone, zerowidth"),
     ],
 )

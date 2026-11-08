@@ -209,6 +209,23 @@ def score_book(book: dict[str, Any], job: Path, label: str | None) -> dict[str, 
     return result
 
 
+def write_step_summary(res: dict[str, Any]) -> None:
+    """Append a Markdown row to the GitHub Actions job summary, when running in CI."""
+    import os
+
+    path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if not path:
+        return
+    s = res["scores"]
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(
+            "| book | CER | WER | paragraph F1 | header leaks | quality score |\n"
+            "|---|---|---|---|---|---|\n"
+            f"| {res['id']} | {s['cer']:.2%} | {s['wer']:.2%} | {s['paragraph_f1']:.3f} "
+            f"| {s['header_leaks']} | {res['quality_score']} |\n"
+        )
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("command", choices=["fetch", "run", "score", "all"])
@@ -231,6 +248,7 @@ def main() -> None:
         if args.command in ("score", "all"):
             res = score_book(book, args.job or JOBS / bid, args.label)
             print(json.dumps(res["scores"], indent=1))
+            write_step_summary(res)
             if not args.no_save:
                 RESULTS.mkdir(parents=True, exist_ok=True)
                 out = RESULTS / f"{bid}.json"

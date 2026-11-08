@@ -1,0 +1,44 @@
+# syntax=docker/dockerfile:1.7
+# CPU image (linux/amd64, linux/arm64). Model weights are downloaded on first
+# start into /models (mount a volume there) unless built with BAKE_MODELS=1.
+FROM python:3.12-slim-trixie
+
+ARG BAKE_MODELS=0
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    PATH=/opt/venv/bin:$PATH \
+    UV_CACHE_DIR=/root/.cache/uv
+
+# External tools: poppler (pdf*), unpaper, pandoc (>= 3, Debian 13), EPUBCheck + JRE.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        poppler-utils unpaper pandoc epubcheck default-jre-headless \
+        libglib2.0-0 libgomp1 ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:0.9.22 /uv /usr/local/bin/uv
+
+WORKDIR /app
+COPY pyproject.toml uv.lock README.md LICENSE THIRD_PARTY_LICENSES.md ./
+# Dependencies first (cached layer), then the project itself.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev --extra docling --no-install-project
+COPY src ./src
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev --extra docling --no-editable
+
+# Runtime: any UID may run the container (compose sets user:), so HOME and
+# caches must not point at root-owned paths.
+ENV REBIND_MODELS_DIR=/models \
+    HF_HOME=/models/huggingface \
+    HOME=/tmp
+RUN mkdir -p /models /data && chmod 0777 /models /data \
+    && if [ "$BAKE_MODELS" = "1" ]; then rebind models && chmod -R a+rX /models; fi
+
+WORKDIR /data
+ENTRYPOINT ["rebind"]
+CMD ["watch", "/data/inbox", "--out", "/data/outbox", "--jobs-dir", "/data/jobs"]

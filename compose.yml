@@ -1,0 +1,41 @@
+# Watch-folder service: drop PDFs into ./inbox, collect EPUBs from ./outbox.
+#   docker compose up -d                          # CPU
+#   docker compose --profile gpu up -d rebind-gpu # NVIDIA GPU
+# Job folders (with report.html per book) are kept in ./jobs; model weights
+# are downloaded once into ./models.
+
+x-rebind: &rebind
+  restart: unless-stopped
+  user: "${REBIND_UID:-1000}:${REBIND_GID:-1000}"
+  volumes:
+    - ./inbox:/data/inbox
+    - ./outbox:/data/outbox
+    - ./jobs:/data/jobs
+    - ./models:/models
+    # Optional global settings:
+    # - ./rebind.toml:/data/rebind.toml:ro
+
+services:
+  rebind:
+    <<: *rebind
+    image: ${REBIND_IMAGE:-rebind:cpu}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cpu
+
+  rebind-gpu:
+    <<: *rebind
+    profiles: ["gpu"]
+    image: ${REBIND_GPU_IMAGE:-rebind:cuda}
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cuda
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

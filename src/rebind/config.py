@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import tomllib
 from pathlib import Path
 from typing import Any, Literal
@@ -211,6 +212,9 @@ def load_config(
     merged = deep_merge(PROFILES[profile], file_data)
     merged = deep_merge(merged, overrides)
     merged["profile"] = profile
+    # Environment fallbacks, mainly for containers.
+    if "models_dir" not in merged and os.environ.get("REBIND_MODELS_DIR"):
+        merged["models_dir"] = os.environ["REBIND_MODELS_DIR"]
     try:
         return Config.model_validate(merged)
     except ValidationError as e:

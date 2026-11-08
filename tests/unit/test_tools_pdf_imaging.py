@@ -103,3 +103,19 @@ def test_pbm_to_png(tmp_path: Path) -> None:
     dst = tmp_path / "a.png"
     pnm_to_png(src, dst)
     assert _decode_png_gray(dst) == bytes([0, 255, 0, 255, 0, 255, 0, 255, 0, 0])
+
+
+def test_jar_tools_run_with_java(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    jar = tmp_path / "share" / "epubcheck.jar"
+    jar.parent.mkdir()
+    jar.write_bytes(b"PK")
+    jar.chmod(0o755)  # Debian ships it executable
+    bindir = tmp_path / "bin"
+    bindir.mkdir()
+    (bindir / "fakecheck").symlink_to(jar)
+    java = bindir / "java"
+    java.write_text("#!/bin/sh\n")
+    java.chmod(0o755)
+    monkeypatch.setenv("PATH", str(bindir))
+    assert tools.command("fakecheck") == [str(java), "-jar", str(jar.resolve())]
+    assert tools.command("nope") is None

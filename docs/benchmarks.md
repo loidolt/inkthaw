@@ -38,7 +38,9 @@ somewhat lower than shown. Docling 2.149.0, 300 dpi, Apple M-series (MPS),
 | M1 pipeline (furniture drop only) | 11.3% | — | — | 0 | — | — |
 | + M2 cleanup, Docling auto OCR (RapidOCR) | 1.77% | 2.69% | 0.954 | 0 | 38 / 120 | 90.2 |
 | + RapidOCR `Det.unclip_ratio = 2.0` (rejected) | 3.09% | 4.38% | 0.948 | 0 | 22 / 120 | 94.5 |
-| **+ RapidOCR `Det.box_thresh = 0.3` (default)** | **1.69%** | **2.68%** | **0.959** | 1 | 37 / 120 | 90.6 |
+| + RapidOCR `Det.box_thresh = 0.3` (default since M2) | 1.69% | 2.68% | 0.959 | 1 | 37 / 120 | 90.6 |
+| **+ M3: repair quotes OCR'd as `66`/`99`** | **1.66%** | **2.63%** | **0.962** | 1 | 37 / 120 | 90.6 |
+| (tried) split run-together words with wordfreq | 1.73% | 2.90% | 0.962 | 1 | — | — |
 
 What moved the numbers:
 
@@ -53,6 +55,14 @@ What moved the numbers:
   elsewhere, so it is not used.
 - **unpaper's gray filter** (M1) garbled whole lines on gray-paper scans and
   is off by default.
+- **Quote repair.** Old typefaces' curly quotes look like `66` and `99` and
+  were read that way ("66 Did you ever remark that door?"). A narrow rule
+  (a `66` before a word at a paragraph or clause start, a `99` right after
+  punctuation that follows a word) restores them.
+- **Splitting run-together words** ("doingwell") was tried and dropped:
+  wordfreq does not know many rare real words ("untasted", "emulously") and
+  scores fragments like "un" and "ly" as common, so it split more good words
+  than bad ones.
 
 The remaining errors are mostly single misread lines (e.g. `sneering. 'Set
 your i ts l ss t il`): RapidOCR's recognizer fails on an occasional line it

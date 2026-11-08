@@ -107,17 +107,30 @@ def which(name: str) -> str | None:
     return shutil.which(name)
 
 
+def command(name: str) -> list[str] | None:
+    """argv prefix to run a tool. Debian installs epubcheck as a bare symlink to a
+    .jar (it relies on binfmt_misc), so .jar targets are run with `java -jar`."""
+    path = which(name)
+    if path is None:
+        return None
+    real = Path(path).resolve()
+    if real.suffix == ".jar":
+        java = which("java")
+        return [java, "-jar", str(real)] if java else None
+    return [path]
+
+
 @cache
 def version(name: str) -> str | None:
     """Return the tool's version string, or None if missing/unknown."""
-    path = which(name)
-    if path is None:
+    cmd = command(name)
+    if cmd is None:
         return None
     tool = TOOLS.get(name)
     args = tool.version_args if tool else ("--version",)
     try:
         proc = subprocess.run(
-            [path, *args], capture_output=True, text=True, timeout=30, check=False
+            [*cmd, *args], capture_output=True, text=True, timeout=30, check=False
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
@@ -126,13 +139,14 @@ def version(name: str) -> str | None:
     return m.group(1) if m else "unknown"
 
 
-def require(name: str) -> str:
-    path = which(name)
-    if path is None:
+def require(name: str) -> list[str]:
+    """argv prefix for a required tool; raises ToolMissingError if absent."""
+    cmd = command(name)
+    if cmd is None:
         tool = TOOLS.get(name)
         hint = f" Install: {tool.install_hint}." if tool else ""
         raise ToolMissingError(f"Required tool '{name}' not found on PATH.{hint}")
-    return path
+    return cmd
 
 
 def run(
@@ -142,8 +156,7 @@ def run(
     timeout: float | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Run a tool; raise RebindError with its stderr on non-zero exit."""
-    exe = require(str(args[0]))
-    cmd = [exe, *(str(a) for a in args[1:])]
+    cmd = [*require(str(args[0])), *(str(a) for a in args[1:])]
     try:
         proc = subprocess.run(
             cmd,

@@ -41,6 +41,8 @@ jobs:
   integration:
     runs-on: ubuntu-24.04
     needs: unit
+    env:
+      REBIND_MODELS_DIR: ${{ github.workspace }}/.models
     steps:
       - uses: actions/checkout@v4
       - name: External tools
@@ -54,9 +56,27 @@ jobs:
       - name: Model cache
         uses: actions/cache@v4
         with:
-          path: ~/.cache/huggingface
-          key: hf-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-          restore-keys: hf-${{ runner.os }}-
+          path: .models
+          key: models-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: models-${{ runner.os }}-
       - run: uv sync --locked --extra docling
       - run: uv run rebind doctor
+      - run: uv run rebind models
       - run: uv run pytest -m integration -v
+
+  docker:
+    runs-on: ubuntu-24.04
+    needs: unit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.cpu
+          load: true
+          tags: rebind:cpu
+          cache-from: type=gha,scope=ci-cpu
+          cache-to: type=gha,mode=max,scope=ci-cpu
+      - name: Smoke test
+        run: docker run --rm rebind:cpu doctor

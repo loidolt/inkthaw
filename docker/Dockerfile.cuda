@@ -1,0 +1,53 @@
+# syntax=docker/dockerfile:1.7
+# NVIDIA GPU image (linux/amd64). Needs the NVIDIA Container Toolkit on the host.
+FROM nvidia/cuda:12.8.1-runtime-ubuntu24.04
+
+ARG BAKE_MODELS=0
+# PyTorch wheel index matching the CUDA runtime above.
+ARG TORCH_INDEX=https://download.pytorch.org/whl/cu128
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON=python3.12 \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    PATH=/opt/venv/bin:$PATH \
+    UV_CACHE_DIR=/root/.cache/uv
+
+# Ubuntu 24.04 ships Python 3.12 and pandoc 3.1.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        python3.12 python3.12-venv \
+        poppler-utils unpaper pandoc epubcheck default-jre-headless \
+        libglib2.0-0 libgomp1 ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:0.9.22 /uv /usr/local/bin/uv
+
+WORKDIR /app
+COPY pyproject.toml uv.lock README.md LICENSE THIRD_PARTY_LICENSES.md ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev --extra docling --no-install-project
+COPY src ./src
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev --extra docling --no-editable
+# The lock file pins CPU-only torch on Linux; swap in the CUDA build of the
+# same version.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    TORCH=$(uv pip show --python /opt/venv/bin/python torch | sed -n 's/^Version: \([^+]*\).*/\1/p') \
+    && VISION=$(uv pip show --python /opt/venv/bin/python torchvision | sed -n 's/^Version: \([^+]*\).*/\1/p') \
+    && uv pip install --python /opt/venv/bin/python --reinstall --index-url "$TORCH_INDEX" \
+        "torch==$TORCH" "torchvision==$VISION"
+
+# Runtime: any UID may run the container (compose sets user:), so HOME and
+# caches must not point at root-owned paths.
+ENV REBIND_MODELS_DIR=/models \
+    HF_HOME=/models/huggingface \
+    HOME=/tmp
+RUN mkdir -p /models /data && chmod 0777 /models /data \
+    && if [ "$BAKE_MODELS" = "1" ]; then rebind models && chmod -R a+rX /models; fi
+
+WORKDIR /data
+ENTRYPOINT ["rebind"]
+CMD ["watch", "/data/inbox", "--out", "/data/outbox", "--jobs-dir", "/data/jobs"]

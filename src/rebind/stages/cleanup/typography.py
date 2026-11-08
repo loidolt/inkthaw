@@ -74,8 +74,23 @@ def _curl_single(s: str) -> str:
     return s.replace("'", "’")
 
 
+# Old typefaces' curly quotes look like 66 and 99, and OCR reads them so:
+# '66 Did you ever...', 'added he, 66 with a very odd story.’ 99'.
+_QUOTE_66 = re.compile(r"(^|(?<=[,:;—]\s))66\s?(?=[^\W\d_])")
+# a closing 99 follows a word plus punctuation ("story. 99"), or a closing single quote
+_QUOTE_99_AFTER_WORD = re.compile(r"(?<=[^\W\d_][.,!?;:—])\s?99(?=\s|$)")
+_QUOTE_99_AFTER_QUOTE = re.compile(r"(?<=[\u2019'])\s?99(?=\s|$)")
+
+
+def fix_figure_quotes(text: str) -> str:
+    t = _QUOTE_66.sub(r'\1"', text)
+    t = _QUOTE_99_AFTER_WORD.sub('"', t)
+    return _QUOTE_99_AFTER_QUOTE.sub('"', t)
+
+
 def normalize_english(text: str) -> str:
-    t = re.sub(r"(?<=\S)\s+([;:!?,])(?=\s|$|[\"'”’)\]])", r"\1", text)
+    t = fix_figure_quotes(text)
+    t = re.sub(r"(?<=\S)\s+([;:!?,])(?=\s|$|[\"'”’)\]])", r"\1", t)
     t = _curl_double(t)
     t = _curl_single(t)
     return t

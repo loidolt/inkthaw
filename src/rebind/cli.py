@@ -122,9 +122,63 @@ def run(
 def watch(
     inbox: Annotated[Path, typer.Argument(help="Folder to watch for PDFs.")],
     out: Annotated[Path, typer.Option(help="Where finished EPUBs go.")] = Path("outbox"),
+    jobs_dir: Annotated[Path, typer.Option(help="Where job folders live.")] = Path("jobs"),
+    config: Annotated[
+        Path | None, typer.Option("--config", "-c", help="Config file (default: ./rebind.toml).")
+    ] = None,
+    interval: Annotated[float, typer.Option(help="Seconds between polls.")] = 5.0,
+    once: Annotated[
+        bool, typer.Option("--once", help="Convert the PDFs already there, then exit.")
+    ] = False,
 ) -> None:
-    """Watch a folder and convert every PDF dropped into it. (Planned for M3.)"""
-    raise _fail("watch mode is not implemented yet (milestone M3)", 2)
+    """Convert every PDF dropped into INBOX. A `<name>.toml` next to a PDF adds
+    per-book settings (title, authors, profile)."""
+    import signal
+
+    from rebind.watch import Watcher
+
+    def _stop(signum: int, frame: object) -> None:
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGTERM, _stop)  # `docker stop` sends SIGTERM
+    try:
+        cfg = load_config(config)  # fail fast on a bad global config
+        if cfg.models_dir is not None:
+            from rebind.engines import get_engine
+
+            get_engine(cfg.engine).prefetch(cfg, console.print)
+        Watcher(inbox, out, jobs_dir, config, interval, console).run(once=once)
+    except RebindError as e:
+        raise _fail(str(e)) from None
+    except KeyboardInterrupt:
+        console.print("stopped; unfinished jobs resume on the next start")
+
+
+@app.command()
+def models(
+    config: Annotated[
+        Path | None, typer.Option("--config", "-c", help="Config file (default: ./rebind.toml).")
+    ] = None,
+    models_dir: Annotated[
+        Path | None,
+        typer.Option(
+            help="Where to store weights (default: config models_dir or $REBIND_MODELS_DIR)."
+        ),
+    ] = None,
+) -> None:
+    """Download the engine's model weights now, so conversions can run offline."""
+    from rebind.engines import get_engine
+
+    try:
+        overrides: dict[str, Any] = {"models_dir": models_dir} if models_dir else {}
+        cfg = load_config(config, overrides)
+        if cfg.models_dir is None:
+            raise RebindError("Set --models-dir, models_dir in rebind.toml, or REBIND_MODELS_DIR")
+        engine = get_engine(cfg.engine)
+        target = engine.prefetch(cfg, console.print)
+    except RebindError as e:
+        raise _fail(str(e)) from None
+    console.print(f"[green]models ready[/] in {target}")
 
 
 @app.command()

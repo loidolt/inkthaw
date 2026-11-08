@@ -11,11 +11,77 @@ Every stage writes its own folder inside `jobs/<slug>/`, so runs are
 resumable and every intermediate file can be inspected. See [PLAN.md](PLAN.md)
 for the design and roadmap.
 
-> **Status: early development (M2).** Scan in, valid EPUB 3 out, with
-> cleanup rules and a quality report that points at the pages worth checking.
-> Docker images and watch mode are milestone M3.
+> **Status: early development (M3).** Scan in, valid EPUB 3 out, with
+> cleanup rules, a quality report that points at the pages worth checking, and
+> a Docker watch-folder service. First tagged release is milestone M4.
 
-## Requirements
+## Before and after
+
+Two scanned pages of *Strange Case of Dr. Jekyll and Mr. Hyde* (public domain,
+[Internet Archive](https://archive.org/details/strangecaseofd00stevuoft)):
+
+<p>
+<img src="docs/samples/scan-page1.png" width="360" alt="Scan of page 1: book title, chapter heading 'Story of the Door' and the first paragraph, which opens with a large drop cap">
+<img src="docs/samples/scan-page2.png" width="360" alt="Scan of page 2: running header '2 Dr. Jekyll and Mr. Hyde', then text with the words 'reput-able' and 'de-meanour' hyphenated across lines">
+</p>
+
+The end of the paragraph that runs across the page break, as it appears in the
+EPUB:
+
+> But he had an approved tolerance for others; sometimes wondering, almost with
+> envy, at the high pressure of spirits involved in their misdeeds; and in any
+> extremity inclined to help rather than to reprove. “I incline to Cain’s
+> heresy,” he used to say quaintly: “I let my brother go to the devil in his own
+> way.” In this character, it was frequently his fortune to be the last reputable
+> acquaintance and the last good influence in the lives of down-going men. And to
+> such as these, so long as they came about his chambers, he never marked a shade
+> of change in his demeanour.
+
+The paragraph is joined across the page break; the running header and page
+number are gone; "reput-able" and "de-meanour" are rejoined while "down-going"
+keeps its hyphen; quotes are curled and the old spacing before `:` and `;` is
+removed. The chapter becomes an EPUB chapter, and the title lines are kept as
+front matter. Not everything is this clean: on the full book the text is about
+98.3% accurate by character ([benchmarks](docs/benchmarks.md)), and the report
+lists the pages that need a look.
+
+## Run with Docker
+
+The easiest way to run rebind is the watch-folder service:
+
+```bash
+docker compose up -d
+```
+
+Drop PDFs into `./inbox`; EPUBs appear in `./outbox`. Each book's job folder,
+including its `report.html`, is kept in `./jobs/<slug>/`. Processed PDFs move
+to `inbox/done/` (or `inbox/failed/` with an `outbox/<slug>.error.txt`). To set a
+book's title, author or profile, put a TOML file with the same name next to the
+PDF before dropping it, e.g. `inbox/my-book.toml`:
+
+```toml
+profile = "nonfiction"
+[metadata]
+title = "My Book"
+authors = ["Jane Author"]
+```
+
+On first start the model weights (about 700 MB) are downloaded into `./models`
+and reused afterwards. The container runs as UID/GID 1000 by default; set
+`REBIND_UID` / `REBIND_GID` to match the owner of these folders. For an NVIDIA
+GPU (needs the NVIDIA Container Toolkit):
+
+```bash
+docker compose --profile gpu up -d rebind-gpu
+```
+
+One-off conversion without the watcher:
+
+```bash
+docker compose run --rm rebind run /data/inbox/book.pdf --out /data/outbox --jobs-dir /data/jobs
+```
+
+## Requirements (without Docker)
 
 - Python 3.12 and [uv](https://docs.astral.sh/uv/)
 - External tools: poppler-utils, unpaper, pandoc (≥ 3.0), epubcheck, and a
@@ -45,7 +111,19 @@ uv run rebind doctor
 
 `doctor` lists each external tool with its version and says what is missing.
 `rebind engines` lists OCR engines and the devices they can use (CUDA, MPS,
-CPU).
+CPU). By default model weights are downloaded into the engines' own caches on
+first use; to keep them in one folder (and run offline afterwards), set
+`models_dir` in `rebind.toml` or `REBIND_MODELS_DIR`, then:
+
+```bash
+uv run rebind models
+```
+
+The watch-folder mode also works without Docker:
+
+```bash
+uv run rebind watch ./inbox --out ./outbox
+```
 
 ## Convert a book
 

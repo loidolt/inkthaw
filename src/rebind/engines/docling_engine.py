@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import warnings
+from collections.abc import Callable
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as pkg_version
 from pathlib import Path
@@ -21,10 +22,12 @@ from typing import Any
 from rebind.config import Config
 from rebind.engines.base import Capabilities, EngineContext
 from rebind.engines.devices import available_devices, resolve_device
+from rebind.errors import RebindError
 from rebind.ir import Block, BlockKind, BookIR, Page
 from rebind.text import is_page_number
 
 CACHE_VERSION = "1"
+MODELS_MARKER = ".rebind-models.json"
 
 
 def _quiet(record: logging.LogRecord) -> bool:
@@ -105,10 +108,59 @@ class DoclingEngine:
 
     # -- conversion ---------------------------------------------------------
 
-    def _converter(self, cfg: Config, ctx: EngineContext) -> Any:
-        if cfg.models_dir is not None:
-            os.environ.setdefault("HF_HOME", str(Path(cfg.models_dir) / "huggingface"))
+    # -- model weights ------------------------------------------------------
+
+    def artifacts_dir(self, cfg: Config) -> Path | None:
+        return Path(cfg.models_dir) / "docling" if cfg.models_dir is not None else None
+
+    def prefetch(self, cfg: Config, log: Callable[[str], None] = lambda _m: None) -> Path | None:
+        """Download the weights this config needs into models_dir (no-op if present).
+
+        Without models_dir, Docling and RapidOCR download into their own caches
+        on first use instead.
+        """
+        target = self.artifacts_dir(cfg)
+        if target is None:
+            return None
+        marker = target / MODELS_MARKER
+        wanted = self._model_set(cfg)
+        if marker.is_file() and json.loads(marker.read_text()) == wanted:
+            return target
         os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+        from docling.utils.model_downloader import download_models
+
+        log(f"downloading model weights into {target} (one-time, about 700 MB)")
+        try:
+            target.mkdir(parents=True, exist_ok=True)
+            self._download(target, cfg, wanted, download_models)
+        except Exception as e:
+            raise RebindError(f"model download into {target} failed: {e}") from e
+        marker.write_text(json.dumps(wanted))
+        return target
+
+    @staticmethod
+    def _download(target: Path, cfg: Config, wanted: dict[str, Any], download_models: Any) -> None:
+        download_models(
+            output_dir=target,
+            with_layout=True,
+            with_tableformer=True,
+            with_code_formula=False,
+            with_picture_classifier=False,
+            with_rapidocr=cfg.ocr.docling_ocr == "rapidocr",
+            rapidocr_models=wanted["rapidocr"] or None,
+        )
+
+    def _model_set(self, cfg: Config) -> dict[str, Any]:
+        rapid = (
+            [f"{cfg.ocr.rapidocr_backend}:iso:{lang}" for lang in cfg.ocr_languages()]
+            if cfg.ocr.docling_ocr == "rapidocr"
+            else []
+        )
+        return {"docling": self.version, "rapidocr": rapid}
+
+    def _converter(self, cfg: Config, ctx: EngineContext) -> Any:
+        os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+        artifacts = self.prefetch(cfg, ctx.log)
         # OCR back-ends reset their own logger level on init, so filter instead.
         for name in ("docling", "rapidocr", "RapidOCR", "easyocr"):
             logger = logging.getLogger(name)
@@ -145,6 +197,8 @@ class DoclingEngine:
             generate_picture_images=cfg.ocr.pictures,
             images_scale=min(cfg.dpi / 72, 4.0),
         )
+        if artifacts is not None:
+            opts.artifacts_path = artifacts
         ocr_kwargs: dict[str, Any] = {"lang": langs, "mode": OcrMode.FULL_PAGE}
         if cfg.ocr.docling_ocr == "rapidocr":
             ocr_kwargs["backend"] = cfg.ocr.rapidocr_backend

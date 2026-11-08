@@ -53,6 +53,11 @@ class Engine(Protocol):
         """String that changes whenever output-affecting settings change."""
         ...
 
+    def prefetch(self, cfg: Config, log: Callable[[str], None]) -> Path | None:
+        """Download model weights into cfg.models_dir ahead of time. None if the
+        engine keeps no weights there."""
+        ...
+
     def convert(self, pages: list[Page], cfg: Config, ctx: EngineContext) -> BookIR:
         """OCR + layout for the given pages. Must call ctx.advance() once per page."""
         ...

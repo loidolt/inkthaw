@@ -46,9 +46,8 @@ def parse_epubcheck(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def run_epubcheck(epub: Path, out_json: Path) -> dict[str, Any]:
-    exe = tools.require("epubcheck")
     proc = subprocess.run(
-        [exe, str(epub), "--json", str(out_json)],
+        [*tools.require("epubcheck"), str(epub), "--json", str(out_json)],
         capture_output=True,
         text=True,
         check=False,

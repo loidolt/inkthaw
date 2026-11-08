@@ -150,5 +150,57 @@
    "output": 365,
    "ground_truth": 349
   }
+ },
+ {
+  "id": "jekyll-hyde",
+  "label": "M3: + OCR'd 66/99 quote repair",
+  "date": "2026-11-08T18:13:01+00:00",
+  "rebind_version": "0.0.1",
+  "git_commit": "46cd543",
+  "engine": "docling",
+  "engine_version": "2.149.0",
+  "settings": {
+   "dpi": 300,
+   "preprocess": {
+    "raster_mode": "render",
+    "color": "gray",
+    "split_spreads": true,
+    "spread_min_aspect": 1.1,
+    "spread_order": "ltr",
+    "unpaper": true,
+    "unpaper_args": [
+     "--no-grayfilter"
+    ],
+    "binarize": false,
+    "workers": null
+   },
+   "ocr": {
+    "languages": [],
+    "docling_ocr": "rapidocr",
+    "rapidocr_backend": "torch",
+    "rapidocr_params": {
+     "Det.box_thresh": 0.3
+    },
+    "tables": false,
+    "pictures": true,
+    "page_batch": 1
+   }
+  },
+  "scores": {
+   "cer": 0.0166,
+   "wer": 0.0263,
+   "paragraph_precision": 0.9422,
+   "paragraph_recall": 0.9819,
+   "paragraph_f1": 0.9617,
+   "header_leaks": 1,
+   "hyp_chars": 137127,
+   "ref_chars": 138078
+  },
+  "quality_score": 90.6,
+  "flagged_pages": 37,
+  "paragraphs": {
+   "output": 366,
+   "ground_truth": 349
+  }
  }
 ]

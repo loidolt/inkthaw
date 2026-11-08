@@ -319,3 +319,26 @@ Decisions made while building, recorded so the plan stays the source of truth.
   `tests/corpus/results/jekyll-hyde.json`); flagged pages were checked against
   per-page error rates from the ground truth (9/10 worst pages flagged, no
   flagged page under 2% error) and by viewing flagged page images.
+
+### M3 decisions
+
+- **`compose.yml` lives at the repository root** (not `docker/`), so the
+  done-criterion command is literally `docker compose up`. Dockerfiles are in
+  `docker/`.
+- **Model weights:** with `models_dir` (or `REBIND_MODELS_DIR`, set to
+  `/models` in the images) the Docling engine downloads exactly the weights it
+  needs (layout, TableFormer, RapidOCR for the configured languages) once and
+  then runs offline via Docling's `artifacts_path`. `rebind models` prefetches;
+  `rebind watch` prefetches at start-up. Images can bake weights in with
+  `--build-arg BAKE_MODELS=1`.
+- **Watch mode polls** (no new dependency such as watchdog): a PDF is taken
+  once its size and mtime are unchanged between two polls. Per-book settings
+  come from a sidecar `<name>.toml`. SIGTERM stops between stages; jobs resume.
+- **Debian's EPUBCheck is 4.2.6** and is installed as a bare `.jar` symlink;
+  tools that resolve to a `.jar` are run with `java -jar`. (Homebrew ships
+  5.x; both validate EPUB 3.)
+- **CUDA image** swaps the lock file's CPU torch for the CUDA 12.8 build of
+  the same version. It was linted but not built or run here (no NVIDIA GPU on
+  the development machine); the release workflow builds it.
+- **Image size:** about 2.6 GB uncompressed for the CPU image, mostly torch
+  (690 MB), transformers, scipy and the JRE.
