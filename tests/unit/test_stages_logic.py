@@ -62,8 +62,9 @@ def test_apply_rules_respects_config() -> None:
     ir = _ir(Block(id="h", kind=BlockKind.PAGE_HEADER, text="X", page=0))
     cfg = Config.model_validate({"cleanup": {"drop_furniture": False}})
     out, changes, applied = apply_rules(ir, cfg)
-    assert applied == []
-    assert len(out.blocks) == 1 and changes == []
+    assert "furniture" not in applied
+    assert [b.kind for b in out.blocks] == [BlockKind.PAGE_HEADER]
+    assert not [c for c in changes if c.rule == "furniture"]
 
 
 def test_classify_page_numbers() -> None:

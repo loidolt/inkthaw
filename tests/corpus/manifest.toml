@@ -1,0 +1,39 @@
+# Ground-truth corpus: public-domain scans paired with transcriptions.
+# Only URLs and checksums live here; scripts/corpus.py downloads the files into
+# tests/corpus/downloads/ (git-ignored) and writes scores to tests/corpus/results/.
+#
+# Planned (PLAN.md §9): footnote-heavy nonfiction, a book with tables, a
+# two-column book, and one poor-quality scan.
+
+[[book]]
+id = "jekyll-hyde"
+title = "Strange Case of Dr. Jekyll and Mr. Hyde"
+authors = ["Robert Louis Stevenson"]
+language = "en"
+profile = "novel"
+notes = """
+Scan: London, E. Nash & Grayson (Colinton edition), University of Toronto copy.
+Ground truth: Project Gutenberg #43, a different edition, so expect a CER floor
+from punctuation and spelling variants (e.g. "countenance, that" vs
+"countenance that"). Pages 1-120 of the scan cover the front matter and the
+whole of Jekyll and Hyde.
+"""
+
+[book.scan]
+source = "https://archive.org/details/strangecaseofd00stevuoft"
+url = "https://archive.org/download/strangecaseofd00stevuoft/strangecaseofd00stevuoft_bw.pdf"
+sha256 = "eb94b344bf0fab0c99be291dd1975c4a5d60b3a99f379b15595f191b17117849"
+pages = [1, 120]
+
+[book.ground_truth]
+source = "https://www.gutenberg.org/ebooks/43"
+url = "https://www.gutenberg.org/cache/epub/43/pg43.txt"
+sha256 = "b43448a88391591f9cf82b25553df00faf47a2752a873185fcdd1156eebdb990"
+format = "gutenberg"
+start = "STORY OF THE DOOR"
+start_occurrence = 2  # the first is in the contents list
+
+[book.output]
+start = "STORY OF THE DOOR"
+end = "FABLES"  # next work in the volume
+running_headers = ["DR. JEKYLL AND MR. HYDE"]

@@ -11,9 +11,9 @@ Every stage writes its own folder inside `jobs/<slug>/`, so runs are
 resumable and every intermediate file can be inspected. See [PLAN.md](PLAN.md)
 for the design and roadmap.
 
-> **Status: early development (M1).** The end-to-end path works: scan in,
-> valid EPUB 3 out. Most cleanup rules (hyphenation, cross-page paragraphs,
-> footnotes, chapters) and the HTML quality report are milestone M2.
+> **Status: early development (M2).** Scan in, valid EPUB 3 out, with
+> cleanup rules and a quality report that points at the pages worth checking.
+> Docker images and watch mode are milestone M3.
 
 ## Requirements
 
@@ -64,7 +64,7 @@ jobs/<slug>/
   30_ir/raw.json       BookIR straight from the engine (+ per-page cache)
   40_ir/clean.json     BookIR after cleanup (+ changes.json)
   50_build/            book.md, metadata.yaml, book.epub
-  60_report/           report.json, epubcheck.json
+  60_report/           report.json, report.html, epubcheck.json
 ```
 
 Running the same command again skips stages whose inputs and settings did not
@@ -77,6 +77,35 @@ uv run rebind run book.pdf --from build
 
 An interrupted OCR run resumes page by page. `rebind report jobs/<slug>` shows
 each stage's status.
+
+## What cleanup does
+
+Each rule can be switched off in `[cleanup]` and records its edits in
+`40_ir/changes.json`:
+
+- drops running headers, footers and page numbers (engine labels first, then a
+  repetition heuristic)
+- repairs reading order on single-column pages
+- typography: ligatures, whitespace, ellipses, dashes; for English also curly
+  quotes and old-style spacing before `; : ! ?`
+- joins words hyphenated across lines when the joined word is in the dictionary
+- merges paragraphs split by page or column breaks
+- links footnote markers to notes (EPUB 3 pop-up footnotes)
+- fixes the heading structure (promotes "Chapter IV", demotes letter
+  sign-offs, merges titles split over several lines)
+- tags front matter and drops the scanned table of contents
+
+## Quality report
+
+`60_report/report.html` shows every flagged page's scan next to the text that
+was read from it, with the reason: garbled lines, a lost first line after a
+chapter heading, low OCR confidence, far too little or too much text, empty
+pages that aren't blank, leftover headers, unmatched footnotes, unbalanced
+brackets. The book also gets a 0–100 score.
+
+```bash
+uv run rebind report jobs/<slug> --open
+```
 
 ## Configuration
 
@@ -102,6 +131,13 @@ uv run pytest -m integration
 The integration test converts a 5-page public-domain scan
 (`tests/fixtures/jekyll-5p.pdf`) end to end. Lint and types:
 `uv run ruff check . && uv run pyright`.
+
+Accuracy is measured against public-domain ground truth (see
+[docs/benchmarks.md](docs/benchmarks.md)):
+
+```bash
+uv run python scripts/corpus.py all
+```
 
 ## Licensing
 

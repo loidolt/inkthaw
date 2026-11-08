@@ -16,6 +16,7 @@ dependencies = [
     "typer>=0.12",
     "pydantic>=2.7",
     "rich>=13.7",
+    "wordfreq>=3.1",
 ]
 
 [project.optional-dependencies]

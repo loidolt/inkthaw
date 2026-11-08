@@ -12,7 +12,6 @@ import importlib.util
 import json
 import logging
 import os
-import re
 import warnings
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as pkg_version
@@ -23,8 +22,7 @@ from rebind.config import Config
 from rebind.engines.base import Capabilities, EngineContext
 from rebind.engines.devices import available_devices, resolve_device
 from rebind.ir import Block, BlockKind, BookIR, Page
-
-PAGE_NUMBER_RE = re.compile(r"^\s*[\[(\-–—]?\s*(\d{1,4}|[ivxlcdm]{1,8})\s*[\])\-–—]?\s*$", re.I)
+from rebind.text import is_page_number
 
 CACHE_VERSION = "1"
 
@@ -62,7 +60,7 @@ def _sha256(path: Path) -> str:
 
 def classify(label: str, text: str) -> BlockKind:
     kind = _LABEL_KIND.get(label, BlockKind.OTHER)
-    if kind in (BlockKind.PAGE_HEADER, BlockKind.PAGE_FOOTER) and PAGE_NUMBER_RE.match(text):
+    if kind in (BlockKind.PAGE_HEADER, BlockKind.PAGE_FOOTER) and is_page_number(text):
         return BlockKind.PAGE_NUMBER
     return kind
 
@@ -147,7 +145,12 @@ class DoclingEngine:
             generate_picture_images=cfg.ocr.pictures,
             images_scale=min(cfg.dpi / 72, 4.0),
         )
-        opts.ocr_options = ocr_cls(lang=langs, mode=OcrMode.FULL_PAGE)
+        ocr_kwargs: dict[str, Any] = {"lang": langs, "mode": OcrMode.FULL_PAGE}
+        if cfg.ocr.docling_ocr == "rapidocr":
+            ocr_kwargs["backend"] = cfg.ocr.rapidocr_backend
+            if cfg.ocr.rapidocr_params:
+                ocr_kwargs["rapidocr_params"] = dict(cfg.ocr.rapidocr_params)
+        opts.ocr_options = ocr_cls(**ocr_kwargs)
         opts.accelerator_options = AcceleratorOptions(
             device=device, num_threads=min(8, os.cpu_count() or 4)
         )

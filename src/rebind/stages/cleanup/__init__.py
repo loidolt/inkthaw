@@ -19,12 +19,30 @@ __all__ = ["Change", "Rule", "RuleFn", "apply_rules", "registry"]
 
 
 def registry() -> list[Rule]:
-    from rebind.stages.cleanup import furniture
+    from rebind.stages.cleanup import (
+        chapters,
+        footnotes,
+        frontmatter,
+        furniture,
+        headers,
+        hyphenation,
+        paragraphs,
+        reading_order,
+        typography,
+    )
 
-    # Order matters. M2 adds: headers, hyphenation, paragraphs, typography,
-    # footnotes, chapters, front matter.
+    # Order matters: drop furniture first, fix text before merging across
+    # pages, link footnotes on final text (offsets), shape structure last.
     return [
         Rule("furniture", furniture.drop_furniture, lambda c: c.cleanup.drop_furniture),
+        Rule("reading_order", reading_order.fix_reading_order, lambda c: c.cleanup.reading_order),
+        Rule("headers", headers.drop_running_headers, lambda c: c.cleanup.running_headers),
+        Rule("typography", typography.normalize_typography, lambda c: c.cleanup.typography),
+        Rule("hyphenation", hyphenation.join_hyphenation, lambda c: c.cleanup.hyphenation),
+        Rule("paragraphs", paragraphs.merge_paragraphs, lambda c: c.cleanup.merge_paragraphs),
+        Rule("footnotes", footnotes.link_footnotes, lambda c: c.cleanup.footnotes),
+        Rule("chapters", chapters.structure_chapters, lambda c: c.cleanup.chapters),
+        Rule("front_matter", frontmatter.mark_front_matter, lambda c: c.cleanup.front_matter),
     ]
 
 
@@ -42,12 +60,18 @@ def apply_rules(ir: BookIR, cfg: Config) -> tuple[BookIR, list[Change], list[str
 
 class CleanupStage:
     name = "cleanup"
-    version = "1"
-    config_keys: tuple[str, ...] = ("cleanup",)
+    version = "2"
+    config_keys: tuple[str, ...] = ("cleanup", "metadata")
     clean_dir = True
 
     def extra_key(self, ctx: StageContext) -> str:
-        return ",".join(r.name for r in registry())
+        from importlib.metadata import version
+
+        try:
+            wf = version("wordfreq")
+        except Exception:
+            wf = "none"
+        return ",".join(r.name for r in registry()) + f";wordfreq={wf}"
 
     def run(self, ctx: StageContext) -> dict[str, Any]:
         job, cfg = ctx.job, ctx.cfg

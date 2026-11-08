@@ -69,3 +69,31 @@ def test_render_table() -> None:
     assert "|---|---|" in md
     assert "| 1 |   |" in md
     assert ": T" in md
+
+
+def test_render_footnotes_and_front_matter() -> None:
+    ir = BookIR(
+        blocks=[
+            _b(1, BlockKind.PARAGRAPH, "A NOVEL", attrs={"role": "front_matter"}),
+            _b(2, BlockKind.PARAGRAPH, "© 1920", attrs={"role": "copyright"}),
+            _b(3, BlockKind.HEADING, "One", level=1),
+            _b(
+                4,
+                BlockKind.PARAGRAPH,
+                "1. He said so.1 And *more*",
+                attrs={"noterefs": [{"start": 14, "end": 15, "note": "n/1"}]},
+            ),
+            Block(
+                id="n/1", kind=BlockKind.FOOTNOTE, text="See [x].", page=0, attrs={"linked": True}
+            ),
+            _b(6, BlockKind.FOOTNOTE, "Orphan note", attrs={"unmatched": True}),
+        ]
+    )
+    md = render(ir)
+    assert md == (
+        "::: front-matter\n\nA NOVEL\n\n© 1920\n\n:::\n\n"
+        "# One\n\n"
+        "1\\. He said so.[^n-1] And \\*more\\*\n\n"
+        "[^n-1]: See \\[x\\].\n\n"
+        "::: footnote-text\nOrphan note\n:::\n"
+    )

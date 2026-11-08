@@ -28,7 +28,9 @@ unpaper_args = ["--no-grayfilter"]
 
 [ocr]
 # languages = ["en"]       # default: metadata.language
-docling_ocr = "auto"       # auto | easyocr | rapidocr | tesseract | ocrmac
+docling_ocr = "rapidocr"   # rapidocr | auto | easyocr | tesseract | ocrmac
+rapidocr_backend = "torch"
+rapidocr_params = { "Det.box_thresh" = 0.3 }
 # tables = false           # set by the profile
 pictures = true
 

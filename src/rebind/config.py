@@ -52,7 +52,17 @@ class PreprocessConfig(_Section):
 class OcrConfig(_Section):
     languages: list[str] = Field(default_factory=list)
     """OCR languages as BCP-47 tags. Empty = metadata.language."""
-    docling_ocr: Literal["auto", "easyocr", "rapidocr", "tesseract", "ocrmac"] = "auto"
+    docling_ocr: Literal["auto", "easyocr", "rapidocr", "tesseract", "ocrmac"] = "rapidocr"
+    """RapidOCR is pinned (not "auto") so output is the same on every platform and
+    the benchmark below applies; "auto" picks whatever OCR back-end is installed."""
+    rapidocr_backend: Literal["torch", "onnxruntime", "openvino", "paddle"] = "torch"
+    """Only used when docling_ocr = "rapidocr"."""
+    rapidocr_params: dict[str, float | int | str | bool] = Field(
+        default_factory=lambda: {"Det.box_thresh": 0.3}
+    )
+    """Extra RapidOCR settings passed through Docling. The default lowers the text
+    detector's box threshold (RapidOCR default 0.5): lines beside a drop cap were
+    otherwise not detected at all (docs/benchmarks.md)."""
     tables: bool = True
     pictures: bool = True
     page_batch: int = 1
@@ -61,15 +71,41 @@ class OcrConfig(_Section):
 
 class CleanupConfig(_Section):
     drop_furniture: bool = True
+    reading_order: bool = True
+    """Sort single-column pages top-to-bottom (fixes engine reading-order slips)."""
+
     running_headers: bool = True
     running_header_threshold: float = 0.3
+    """Drop a page-edge line repeating on more than this share of all pages..."""
+    running_header_local_density: float = 0.3
+    """...or on this share of the pages between its first and last occurrence
+    (catches chapter-title headers that only run through one chapter)."""
+    running_header_min_pages: int = 3
+
     hyphenation: bool = True
+    hyphen_join_min_zipf: float = 2.0
+    """Join 'enter- prises' only if the joined word is at least this common
+    (wordfreq Zipf scale). Otherwise keep the hyphen (a real compound)."""
+
     merge_paragraphs: bool = True
     typography: bool = True
     footnotes: bool = True
     chapters: bool = True
+
     front_matter: bool = True
     drop_scanned_toc: bool = True
+    front_matter_max_fraction: float = 0.15
+    front_matter_max_pages: int = 30
+
+
+class QualityConfig(_Section):
+    low_confidence: float = 0.80
+    min_dictionary_ratio: float = 0.85
+    char_count_low: float = 0.5
+    """Flag pages with fewer characters than this share of the median page."""
+    char_count_high: float = 1.6
+    unbalanced_tolerance: int = 1
+    """Allowed open/close mismatch of brackets per page before flagging."""
 
 
 class BuildConfig(_Section):
@@ -99,6 +135,7 @@ class Config(_Section):
     cleanup: CleanupConfig = Field(default_factory=CleanupConfig)
     build: BuildConfig = Field(default_factory=BuildConfig)
     validate_: ValidateConfig = Field(default_factory=ValidateConfig, alias="validate")
+    quality: QualityConfig = Field(default_factory=QualityConfig)
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 

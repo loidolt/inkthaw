@@ -1,4 +1,4 @@
-"""validate: epubcheck + report.json. (Quality flags and report.html land in M2.)"""
+"""validate: epubcheck, per-page quality flags, report.json and report.html."""
 
 from __future__ import annotations
 
@@ -7,9 +7,11 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from rebind import tools
+from rebind import quality, tools
 from rebind.errors import RebindError, StageError
+from rebind.ir import BookIR
 from rebind.pipeline import StageContext
+from rebind.report import write_html
 
 SEVERITIES = ("FATAL", "ERROR", "WARNING", "USAGE", "INFO")
 
@@ -60,8 +62,8 @@ def run_epubcheck(epub: Path, out_json: Path) -> dict[str, Any]:
 
 class ValidateStage:
     name = "validate"
-    version = "1"
-    config_keys: tuple[str, ...] = ("validate",)
+    version = "2"
+    config_keys: tuple[str, ...] = ("validate", "quality", "metadata")
     clean_dir = True
 
     def extra_key(self, ctx: StageContext) -> str:
@@ -87,16 +89,30 @@ class ValidateStage:
                         f"[dim]({m['path']}:{m['line']})[/]"
                     )
 
+        raw, clean = BookIR.load(job.raw_ir), BookIR.load(job.clean_ir)
+        q = quality.assess(raw, clean, cfg, job.root)
+        ctx.info(
+            f"quality score {q['score']}, {q['flagged_pages']}/{q['pages']} pages flagged"
+            + (
+                f": {', '.join(f'{k} {n}' for k, n in q['flag_counts'].items())}"
+                if q["flag_counts"]
+                else ""
+            )
+        )
+
         stages = {name: rec.info for name, rec in ctx.manifest.stages.items() if name != self.name}
         report = {
             "slug": job.slug,
+            "title": stages.get("build", {}).get("title"),
             "epub": job.rel(epub),
             "epub_bytes": epub.stat().st_size,
             "epubcheck": check,
             "stages": stages,
-            "quality": None,  # M2: per-page flags + overall score
+            "quality": q,
         }
         job.report_json.write_text(json.dumps(report, indent=1), encoding="utf-8")
+        html_path = write_html(job)
+        ctx.info(f"report: {job.rel(html_path)}")
 
         if check and check["errors"] and cfg.validate_.fail_on_error:
             raise StageError(
@@ -105,6 +121,8 @@ class ValidateStage:
         return {
             "epubcheck_errors": check["errors"] if check else None,
             "epubcheck_warnings": check["warnings"] if check else None,
+            "quality_score": q["score"],
+            "flagged_pages": q["flagged_pages"],
         }
 
 

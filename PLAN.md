@@ -278,3 +278,44 @@ Decisions made while building, recorded so the plan stays the source of truth.
 - **Known Docling limitation (fixture page 1):** the first line next to a
   large drop cap is dropped entirely. M2's character-count flag should catch
   this class of loss.
+
+### M2 decisions
+
+- **Extra cleanup rule: `reading_order`** (runs right after furniture). On pages
+  where no two blocks sit side by side, blocks are sorted top-to-bottom.
+  Docling occasionally emitted a middle paragraph after the bottom one when
+  their boxes overlapped by a few pixels; on the Jekyll benchmark this one rule
+  took CER from 11.3% to 1.8% (moved text counts as deleted plus inserted).
+- **Rule order:** furniture, reading_order, headers, typography, hyphenation,
+  paragraphs, footnotes, chapters, front_matter. Text rules run before the
+  cross-page merge; footnotes link on final text because they store offsets.
+- **Paragraph merge** fires when the first paragraph has no terminal
+  punctuation *or* the next one starts lowercase (§4.4 says "and"). On the
+  benchmark scan many page breaks end in a comma or mid-clause and continue
+  with a capitalised name or a quotation mark.
+- **Hyphenation** joins a split word only if the joined form has wordfreq Zipf
+  ≥ 2.0; otherwise it keeps the hyphen. wordfreq cannot score hyphenated forms
+  directly, so "more common hyphenated form" (§4.4) is approximated this way.
+- **Typography** curls quotes and removes spacing before `; : ! ?` for English
+  only; other languages keep their printed conventions. Pandoc's `smart`
+  extension is turned off so it cannot re-interpret quotes.
+- **Report template uses `string.Template`**, not Jinja2 (§8 names
+  `report.html.j2`): Jinja2 is not in §7, and the page is simple.
+- **Quality flags** beyond §4.6: `garbled_text` (a run of non-words, usually one
+  misread line; whole-page dictionary ratio barely moves for a single bad line)
+  and `missing_start` (a paragraph right after a heading starting lowercase: the
+  drop-cap line was lost). Single letters only count as words if they are real
+  one-letter words in that language; wordfreq rates stray letters as common.
+- **Benchmark:** `scripts/corpus.py` + `tests/corpus/manifest.toml`. CER uses a
+  word-level difflib alignment with exact Levenshtein inside mismatched
+  segments, so a whole book scores in seconds. Results are appended to
+  `tests/corpus/results/<id>.json`; see `docs/benchmarks.md`.
+- **Default OCR is pinned to RapidOCR (torch) with `Det.box_thresh = 0.3`**
+  instead of Docling's "auto": same output on every platform, and the lower
+  detector threshold recovers lines beside drop caps (all five chapter
+  openings in the benchmark were lost at the default 0.5). Measured in
+  `docs/benchmarks.md`; `Det.unclip_ratio = 2.0` was tried and rejected.
+- **M2 done-criteria:** CER on the novel test book is 1.69% (recorded in
+  `tests/corpus/results/jekyll-hyde.json`); flagged pages were checked against
+  per-page error rates from the ground truth (9/10 worst pages flagged, no
+  flagged page under 2% error) and by viewing flagged page images.

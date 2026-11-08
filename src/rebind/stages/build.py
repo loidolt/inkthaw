@@ -86,7 +86,7 @@ def _file_hash(path: Path | None) -> str:
 
 class BuildStage:
     name = "build"
-    version = "1"
+    version = "2"
     config_keys: tuple[str, ...] = ("metadata", "build")
     clean_dir = True
 
@@ -156,7 +156,7 @@ class BuildStage:
             "pandoc",
             "book.md",
             "--from",
-            "markdown",
+            "markdown-smart",
             "--to",
             "epub3",
             "--output",

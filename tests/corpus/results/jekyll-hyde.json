@@ -1,0 +1,154 @@
+[
+ {
+  "id": "jekyll-hyde",
+  "label": "default (docling auto OCR = RapidOCR torch)",
+  "date": "2026-11-08T17:34:11+00:00",
+  "rebind_version": "0.0.1",
+  "git_commit": "4e8073c",
+  "engine": "docling",
+  "engine_version": "2.149.0",
+  "settings": {
+   "dpi": 300,
+   "preprocess": {
+    "raster_mode": "render",
+    "color": "gray",
+    "split_spreads": true,
+    "spread_min_aspect": 1.1,
+    "spread_order": "ltr",
+    "unpaper": true,
+    "unpaper_args": [
+     "--no-grayfilter"
+    ],
+    "binarize": false,
+    "workers": null
+   },
+   "ocr": {
+    "languages": [],
+    "docling_ocr": "auto",
+    "rapidocr_backend": "torch",
+    "rapidocr_unclip_ratio": null,
+    "tables": false,
+    "pictures": true,
+    "page_batch": 1
+   }
+  },
+  "scores": {
+   "cer": 0.0177,
+   "wer": 0.0269,
+   "paragraph_precision": 0.9282,
+   "paragraph_recall": 0.9818,
+   "paragraph_f1": 0.9542,
+   "header_leaks": 0,
+   "hyp_chars": 136952,
+   "ref_chars": 138078
+  },
+  "quality_score": 90.2,
+  "flagged_pages": 38,
+  "paragraphs": {
+   "output": 364,
+   "ground_truth": 349
+  }
+ },
+ {
+  "id": "jekyll-hyde",
+  "label": "rapidocr Det.unclip_ratio=2.0 (rejected)",
+  "date": "2026-11-08T17:44:51+00:00",
+  "rebind_version": "0.0.1",
+  "git_commit": "4e8073c",
+  "engine": "docling",
+  "engine_version": "2.149.0",
+  "settings": {
+   "dpi": 300,
+   "preprocess": {
+    "raster_mode": "render",
+    "color": "gray",
+    "split_spreads": true,
+    "spread_min_aspect": 1.1,
+    "spread_order": "ltr",
+    "unpaper": true,
+    "unpaper_args": [
+     "--no-grayfilter"
+    ],
+    "binarize": false,
+    "workers": null
+   },
+   "ocr": {
+    "languages": [],
+    "docling_ocr": "rapidocr",
+    "rapidocr_backend": "torch",
+    "rapidocr_unclip_ratio": 2.0,
+    "tables": false,
+    "pictures": true,
+    "page_batch": 1
+   }
+  },
+  "scores": {
+   "cer": 0.0309,
+   "wer": 0.0438,
+   "paragraph_precision": 0.9258,
+   "paragraph_recall": 0.972,
+   "paragraph_f1": 0.9483,
+   "header_leaks": 0,
+   "hyp_chars": 135411,
+   "ref_chars": 138078
+  },
+  "quality_score": 94.5,
+  "flagged_pages": 22,
+  "paragraphs": {
+   "output": 356,
+   "ground_truth": 349
+  }
+ },
+ {
+  "id": "jekyll-hyde",
+  "label": "rapidocr Det.box_thresh=0.3 (new default)",
+  "date": "2026-11-08T17:44:57+00:00",
+  "rebind_version": "0.0.1",
+  "git_commit": "4e8073c",
+  "engine": "docling",
+  "engine_version": "2.149.0",
+  "settings": {
+   "dpi": 300,
+   "preprocess": {
+    "raster_mode": "render",
+    "color": "gray",
+    "split_spreads": true,
+    "spread_min_aspect": 1.1,
+    "spread_order": "ltr",
+    "unpaper": true,
+    "unpaper_args": [
+     "--no-grayfilter"
+    ],
+    "binarize": false,
+    "workers": null
+   },
+   "ocr": {
+    "languages": [],
+    "docling_ocr": "rapidocr",
+    "rapidocr_backend": "torch",
+    "rapidocr_params": {
+     "Det.box_thresh": 0.3
+    },
+    "tables": false,
+    "pictures": true,
+    "page_batch": 1
+   }
+  },
+  "scores": {
+   "cer": 0.0169,
+   "wer": 0.0268,
+   "paragraph_precision": 0.9419,
+   "paragraph_recall": 0.9759,
+   "paragraph_f1": 0.9586,
+   "header_leaks": 1,
+   "hyp_chars": 137153,
+   "ref_chars": 138078
+  },
+  "quality_score": 90.6,
+  "flagged_pages": 37,
+  "paragraphs": {
+   "output": 365,
+   "ground_truth": 349
+  }
+ }
+]

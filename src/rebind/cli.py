@@ -130,8 +130,13 @@ def watch(
 @app.command()
 def report(
     job_dir: Annotated[Path, typer.Argument(help="Job folder, e.g. jobs/<slug>.")],
+    open_html: Annotated[
+        bool, typer.Option("--open/--no-open", help="Open report.html in a browser.")
+    ] = False,
 ) -> None:
-    """Show a job's report. (The HTML report arrives in M2.)"""
+    """Show a job's stage status, rebuild report.html, optionally open it."""
+    from rebind.report import write_html
+
     job = Job(job_dir.resolve())
     if not job.manifest_path.is_file():
         raise _fail(f"{job_dir} is not a rebind job folder (no manifest.json)")
@@ -156,14 +161,29 @@ def report(
             rec.error.splitlines()[0][:80] if rec.error else summary[:100],
         )
     console.print(table)
-    if job.report_json.is_file():
-        data = json.loads(job.report_json.read_text(encoding="utf-8"))
-        chk = data.get("epubcheck")
-        if chk:
-            console.print(
-                f"epubcheck {chk.get('checker_version')}: "
-                f"{chk['errors']} errors, {chk['warnings']} warnings"
-            )
+    if not job.report_json.is_file():
+        console.print("[yellow]no report yet: the validate stage has not run[/]")
+        return
+    data = json.loads(job.report_json.read_text(encoding="utf-8"))
+    chk = data.get("epubcheck")
+    if chk:
+        console.print(
+            f"epubcheck {chk.get('checker_version')}: "
+            f"{chk['errors']} errors, {chk['warnings']} warnings"
+        )
+    q = data.get("quality") or {}
+    if q:
+        console.print(
+            f"quality score [bold]{q['score']}[/], {q['flagged_pages']}/{q['pages']} pages flagged"
+        )
+        for code, n in q.get("flag_counts", {}).items():
+            console.print(f"  {code}: {n}")
+    html_path = write_html(job)
+    console.print(f"[bold]Report:[/] {html_path}")
+    if open_html:
+        import webbrowser
+
+        webbrowser.open(html_path.as_uri())
 
 
 @app.command()

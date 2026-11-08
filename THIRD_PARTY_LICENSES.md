@@ -11,6 +11,13 @@ alongside. Keep it current whenever a dependency, model, or bundled tool changes
 | typer | MIT | CLI |
 | pydantic | MIT | config, BookIR |
 | rich | MIT | terminal output |
+| wordfreq | Apache-2.0 (code); word-frequency data CC-BY-SA 4.0 | dictionary checks: hyphenation joins, garbled-text flags. The data is used at runtime, not redistributed by rebind itself; anyone redistributing an image or bundle that includes wordfreq must keep its data attribution. |
+| ftfy | Apache-2.0 | wordfreq dependency |
+| langcodes | MIT | wordfreq dependency |
+| locate | MIT | wordfreq dependency (its PyPI classifier says "Other/Proprietary", but the shipped LICENSE file is MIT) |
+| msgpack | Apache-2.0 | wordfreq dependency |
+| regex | Apache-2.0 AND CNRI-Python | wordfreq dependency |
+| wcwidth | MIT | ftfy dependency |
 
 ## Default engine (optional extra `rebind[docling]`)
 
@@ -44,6 +51,13 @@ These are not Python dependencies. They will be installed in the Docker images
 
 marker (GPL code, restricted weights) and MinerU (license to verify) may only
 be supported later as separately installed plugins.
+
+## Benchmark corpus (downloaded on demand, never committed)
+
+`tests/corpus/manifest.toml` lists public-domain scans (Internet Archive) and
+ground-truth texts (Project Gutenberg). `scripts/corpus.py` downloads them into
+the git-ignored `tests/corpus/downloads/`. Project Gutenberg texts are public
+domain in the US; the Gutenberg licence applies to their trademark and header.
 
 ## Test fixtures
 
