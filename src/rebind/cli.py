@@ -2,15 +2,21 @@
 
 from __future__ import annotations
 
+import json
+import shutil
 import sys
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
 from rebind import __version__, tools
+from rebind.config import PROFILES, load_config
+from rebind.errors import RebindError
+from rebind.job import Job, slugify
+from rebind.pipeline import STAGE_NAMES, run_pipeline
 
 app = typer.Typer(
     name="rebind",
@@ -45,10 +51,119 @@ def main(
 
 @app.command()
 def run(
-    pdf: Annotated[Path, typer.Argument(help="Scanned PDF to convert.")],
+    pdf: Annotated[
+        Path,
+        typer.Argument(help="Scanned PDF to convert.", exists=True, dir_okay=False, readable=True),
+    ],
+    config: Annotated[
+        Path | None, typer.Option("--config", "-c", help="Config file (default: ./rebind.toml).")
+    ] = None,
+    profile: Annotated[str | None, typer.Option(help=f"Preset: {', '.join(PROFILES)}.")] = None,
+    title: Annotated[str | None, typer.Option(help="Book title.")] = None,
+    author: Annotated[list[str] | None, typer.Option(help="Author (repeatable).")] = None,
+    language: Annotated[str | None, typer.Option(help="BCP-47 language, e.g. en, de.")] = None,
+    cover: Annotated[Path | None, typer.Option(help="Cover image.")] = None,
+    engine: Annotated[str | None, typer.Option(help="OCR/layout engine.")] = None,
+    device: Annotated[str | None, typer.Option(help="auto | cpu | cuda | mps.")] = None,
+    dpi: Annotated[int | None, typer.Option(help="Rasterization DPI.")] = None,
+    from_stage: Annotated[
+        str | None, typer.Option("--from", help=f"Re-run from: {', '.join(STAGE_NAMES)}.")
+    ] = None,
+    to_stage: Annotated[str | None, typer.Option("--to", help="Stop after this stage.")] = None,
+    out: Annotated[Path, typer.Option(help="Where the finished EPUB is copied.")] = Path("out"),
+    jobs_dir: Annotated[Path, typer.Option(help="Where job folders live.")] = Path("jobs"),
+    slug: Annotated[
+        str | None, typer.Option(help="Job folder name (default: from file name).")
+    ] = None,
 ) -> None:
-    """Convert a scanned PDF to EPUB. (Milestone M1.)"""
-    raise _fail("run is not implemented yet (milestone M1)", 2)
+    """Convert a scanned PDF to EPUB (resumes an existing job when possible)."""
+    overrides: dict[str, Any] = {
+        "profile": profile,
+        "engine": engine,
+        "device": device,
+        "dpi": dpi,
+    }
+    meta = {"title": title, "authors": author or None, "language": language, "cover": cover}
+    meta = {k: v for k, v in meta.items() if v is not None}
+    if meta:
+        overrides["metadata"] = meta
+    try:
+        cfg = load_config(config, overrides)
+        job = Job((jobs_dir / (slug or slugify(pdf.stem))).resolve())
+        console.print(
+            f"[bold]rebind[/] {__version__}: {pdf.name} -> {job.root} "
+            f"[dim](profile {cfg.profile}, engine {cfg.engine}, {cfg.dpi} dpi)[/]"
+        )
+        ctx = run_pipeline(
+            job,
+            cfg,
+            input_pdf=pdf.resolve(),
+            from_stage=from_stage,
+            to_stage=to_stage,
+            console=console,
+        )
+    except RebindError as e:
+        raise _fail(str(e)) from None
+    except KeyboardInterrupt:
+        raise _fail("interrupted; re-run the same command to resume", 130) from None
+
+    if job.epub.is_file() and (to_stage is None or to_stage in ("build", "validate")):
+        out.mkdir(parents=True, exist_ok=True)
+        final = out / f"{job.slug}.epub"
+        shutil.copyfile(job.epub, final)
+        console.print(f"\n[bold green]EPUB:[/] {final}")
+        if job.report_json.is_file():
+            console.print(f"[bold]Report:[/] {job.report_json}")
+    if ctx.warnings:
+        console.print(f"[yellow]{len(ctx.warnings)} warning(s)[/] (see output above)")
+
+
+@app.command()
+def watch(
+    inbox: Annotated[Path, typer.Argument(help="Folder to watch for PDFs.")],
+    out: Annotated[Path, typer.Option(help="Where finished EPUBs go.")] = Path("outbox"),
+) -> None:
+    """Watch a folder and convert every PDF dropped into it. (Planned for M3.)"""
+    raise _fail("watch mode is not implemented yet (milestone M3)", 2)
+
+
+@app.command()
+def report(
+    job_dir: Annotated[Path, typer.Argument(help="Job folder, e.g. jobs/<slug>.")],
+) -> None:
+    """Show a job's report. (The HTML report arrives in M2.)"""
+    job = Job(job_dir.resolve())
+    if not job.manifest_path.is_file():
+        raise _fail(f"{job_dir} is not a rebind job folder (no manifest.json)")
+    manifest = job.load_manifest()
+    table = Table(title=f"{job.slug}", show_lines=False)
+    for col in ("stage", "status", "time", "summary"):
+        table.add_column(col)
+    for name in STAGE_NAMES:
+        rec = manifest.stages.get(name)
+        if rec is None:
+            table.add_row(name, "pending", "", "")
+            continue
+        summary = ", ".join(
+            f"{k}={v}" for k, v in rec.info.items() if not isinstance(v, list | dict)
+        )
+        style = {"done": "green", "failed": "red", "running": "yellow"}.get(rec.status, "")
+        dur = f"{rec.duration_s:.1f}s" if rec.duration_s is not None else ""
+        table.add_row(
+            name,
+            f"[{style}]{rec.status}[/]" if style else rec.status,
+            dur,
+            rec.error.splitlines()[0][:80] if rec.error else summary[:100],
+        )
+    console.print(table)
+    if job.report_json.is_file():
+        data = json.loads(job.report_json.read_text(encoding="utf-8"))
+        chk = data.get("epubcheck")
+        if chk:
+            console.print(
+                f"epubcheck {chk.get('checker_version')}: "
+                f"{chk['errors']} errors, {chk['warnings']} warnings"
+            )
 
 
 @app.command()

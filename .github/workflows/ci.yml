@@ -36,4 +36,27 @@ jobs:
           enable-cache: true
       - run: uv sync --locked
       - run: uv run rebind doctor || true  # informative; no engine installed in this job
-      - run: uv run pytest --cov=rebind --cov-report=term-missing
+      - run: uv run pytest -m "not integration" --cov=rebind --cov-report=term-missing
+
+  integration:
+    runs-on: ubuntu-24.04
+    needs: unit
+    steps:
+      - uses: actions/checkout@v4
+      - name: External tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            poppler-utils unpaper pandoc epubcheck default-jre-headless
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Model cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          restore-keys: hf-${{ runner.os }}-
+      - run: uv sync --locked --extra docling
+      - run: uv run rebind doctor
+      - run: uv run pytest -m integration -v
