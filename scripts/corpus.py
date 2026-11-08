@@ -72,17 +72,9 @@ def fetch(book: dict[str, Any]) -> None:
     if first is None:
         p["scan"].write_bytes(p["full"].read_bytes())
     elif not p["scan"].is_file():
-        split = p["scan"].parent / "split"
-        split.mkdir(exist_ok=True)
-        subprocess.run(
-            ["pdfseparate", "-f", str(first), "-l", str(last), p["full"], split / "p%04d.pdf"],
-            check=True,
-        )
-        parts = sorted(split.glob("p*.pdf"))
-        subprocess.run(["pdfunite", *parts, p["scan"]], check=True)
-        for part in parts:
-            part.unlink()
-        split.rmdir()
+        from rebind.pdf import write_subset
+
+        write_subset(p["full"], p["scan"], first, last)
     print(f"{book['id']}: ready ({p['scan']})")
 
 

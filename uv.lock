@@ -1928,7 +1928,10 @@ name = "rebind"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "numpy" },
+    { name = "pillow" },
     { name = "pydantic" },
+    { name = "pypdfium2" },
     { name = "rich" },
     { name = "typer" },
     { name = "wordfreq" },
@@ -1954,7 +1957,10 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.50" },
+    { name = "numpy", specifier = ">=1.26" },
+    { name = "pillow", specifier = ">=10.0" },
     { name = "pydantic", specifier = ">=2.7" },
+    { name = "pypdfium2", specifier = ">=5.0" },
     { name = "rich", specifier = ">=13.7" },
     { name = "torch", marker = "sys_platform == 'linux' and extra == 'docling'", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torch", marker = "sys_platform != 'linux' and extra == 'docling'" },

@@ -7,44 +7,6 @@ import pytest
 from rebind import tools
 from rebind.errors import RebindError, ToolMissingError
 from rebind.imaging import png_size, pnm_to_png, write_png
-from rebind.pdf import parse_pdfimages_list, parse_pdfinfo
-
-PDFINFO = """\
-Title:           A Book
-Author:          Some One
-Pages:           3
-Page    1 size: 612 x 792 pts (letter)
-Page    1 rot:  0
-Page    2 size: 1224 x 792 pts
-Page    2 rot:  0
-Page    3 size: 612 x 792 pts (letter)
-Page    3 rot:  90
-"""
-
-PDFIMAGES = """\
-page   num  type   width height color comp bpc  enc interp  object ID x-ppi y-ppi size ratio
---------------------------------------------------------------------------------------------
-   1     0 image    2550  3300  gray    1   8  jpeg   no         3  0   300   300  130K 8.8%
-   1     1 smask    2550  3300  gray    1   8  image  no         4  0   300   300  1K 0.1%
-   2     2 image    5100  3300  gray    1   1  jbig2  no         6  0   300   300  161K  11%
-"""
-
-
-def test_parse_pdfinfo() -> None:
-    fields, pages = parse_pdfinfo(PDFINFO)
-    assert fields["Title"] == "A Book"
-    assert fields["Pages"] == "3"
-    assert pages[1].width_pt == 612
-    assert pages[2].aspect == pytest.approx(1224 / 792)
-    assert pages[3].rotate == 90
-    assert pages[3].display_size == (792, 612)
-
-
-def test_parse_pdfimages_skips_masks() -> None:
-    imgs = parse_pdfimages_list(PDFIMAGES)
-    assert len(imgs[1]) == 1
-    assert imgs[1][0].x_ppi == 300
-    assert imgs[2][0].encoding == "jbig2"
 
 
 def test_require_missing_tool() -> None:

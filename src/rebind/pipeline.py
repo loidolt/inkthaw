@@ -17,7 +17,7 @@ from typing import Any, Protocol, TypeVar
 from rich.console import Console
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, TimeElapsedColumn
 
-from rebind import __version__, tools
+from rebind import __version__, pdf, tools
 from rebind.config import Config
 from rebind.errors import RebindError, StageError
 from rebind.job import STAGE_DIRS, Job
@@ -142,6 +142,7 @@ def run_pipeline(
     manifest.rebind_version = __version__
     manifest.config = cfg.model_dump(mode="json", by_alias=True)
     manifest.tools = {name: tools.version(name) for name in tools.TOOLS}
+    manifest.tools.update(pdf.versions())
     ctx = StageContext(job=job, cfg=cfg, manifest=manifest, input_pdf=input_pdf)
     if console is not None:
         ctx.console = console

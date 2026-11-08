@@ -22,6 +22,7 @@ class PageSpec:
     width_pt: float
     height_pt: float
     image: Image | None = None
+    rotate: int = 0
 
 
 def gray_image(width: int, height: int, painter=None) -> Image:
@@ -83,9 +84,9 @@ def write_pdf(path: Path, pages: list[PageSpec], info: dict[str, str] | None = N
         content_obj = add(b"<< /Length %d >>\nstream\n" % len(content) + content + b"\nendstream")
         kids.append(
             add(
-                b"<< /Type /Page /Parent %d 0 R /MediaBox [0 0 %.2f %.2f] "
+                b"<< /Type /Page /Parent %d 0 R /MediaBox [0 0 %.2f %.2f] /Rotate %d "
                 b"/Resources %s /Contents %d 0 R >>"
-                % (pages_obj, spec.width_pt, spec.height_pt, resources, content_obj)
+                % (pages_obj, spec.width_pt, spec.height_pt, spec.rotate, resources, content_obj)
             )
         )
     objs[catalog - 1] = b"<< /Type /Catalog /Pages %d 0 R >>" % pages_obj

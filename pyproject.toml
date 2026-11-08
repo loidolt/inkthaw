@@ -13,13 +13,27 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Text Processing :: Markup",
     "Environment :: Console",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
 ]
+keywords = ["ocr", "epub", "pdf", "scanned books", "docling"]
 dependencies = [
     "typer>=0.12",
     "pydantic>=2.7",
     "rich>=13.7",
     "wordfreq>=3.1",
+    # PDF reading and rendering (PDFium; Apache-2.0 / BSD-3-Clause). Replaces poppler.
+    "pypdfium2>=5.0",
+    # Page images and in-process preprocessing (replaces unpaper). Both permissive.
+    "pillow>=10.0",
+    "numpy>=1.26",
 ]
+
+[project.urls]
+Homepage = "https://github.com/loidolt/rebind"
+Documentation = "https://github.com/loidolt/rebind#readme"
+Issues = "https://github.com/loidolt/rebind/issues"
+Changelog = "https://github.com/loidolt/rebind/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 # Default OCR/layout engine (MIT). Kept optional so the core installs light.

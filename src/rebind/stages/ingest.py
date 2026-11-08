@@ -19,15 +19,16 @@ TEXT_LAYER_PAGE_FRACTION = 0.5
 
 class IngestStage:
     name = "ingest"
-    version = "1"
+    version = "2"  # 2: read with PDFium instead of poppler
     config_keys: tuple[str, ...] = ()
     clean_dir = True
 
     def extra_key(self, ctx: StageContext) -> str:
+        pdfium = pdf.versions()["pdfium"]
         if ctx.input_pdf is not None:
-            return sha256_file(ctx.input_pdf)
+            return f"{sha256_file(ctx.input_pdf)};pdfium={pdfium}"
         if ctx.manifest.input_sha256:
-            return ctx.manifest.input_sha256
+            return f"{ctx.manifest.input_sha256};pdfium={pdfium}"
         raise RebindError("No input PDF given and the job has not been ingested yet")
 
     def run(self, ctx: StageContext) -> dict[str, Any]:

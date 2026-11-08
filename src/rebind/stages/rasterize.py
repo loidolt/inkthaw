@@ -7,6 +7,8 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
+import PIL
+
 from rebind import pdf
 from rebind.config import Config
 from rebind.imaging import png_size
@@ -59,12 +61,13 @@ def _can_extract(sp: dict[str, Any]) -> bool:
 
 class RasterizeStage:
     name = "rasterize"
-    version = "1"
+    version = "2"  # 2: PDFium (pypdfium2) instead of poppler's pdftoppm/pdfimages
     config_keys: tuple[str, ...] = ("dpi", "preprocess")
     clean_dir = True
 
     def extra_key(self, ctx: StageContext) -> str:
-        return ""
+        v = pdf.versions()
+        return f"pdfium={v['pdfium']};pillow={PIL.__version__}"
 
     def run(self, ctx: StageContext) -> dict[str, Any]:
         cfg, job = ctx.cfg, ctx.job
@@ -82,7 +85,7 @@ class RasterizeStage:
                 extract
                 and plan.side is None
                 and _can_extract(by_number[plan.source_page])
-                and pdf.extract_page_image(job.source_pdf, plan.source_page, out)
+                and pdf.extract_page_image(job.source_pdf, plan.source_page, out, gray=gray)
             ):
                 method = "extract"
             if method == "render":
