@@ -120,6 +120,30 @@ from a handful of lines the recognizer garbles or not (each such line costs
 about 0.04 points), so a second corpus book is needed before reading more into
 them.
 
+## Native EPUB writer (no pandoc)
+
+The build stage writes EPUB 3 itself (`build.backend = "native"`, the
+default) instead of calling pandoc. Same job as the M5 default above: every
+stage up to cleanup was reused unchanged, and only build and validate re-ran
+(2026-11-08, EPUBCheck 5.4.0).
+
+| Build backend | CER | WER | Para F1 | Leaks | Flagged | Score | EPUBCheck | EPUB size | Build time |
+|---|---|---|---|---|---|---|---|---|---|
+| pandoc 3.8.2.1 (M5 default) | 1.82% | 2.80% | 0.966 | 0 | 31 | 92.2 | 0 errors, 0 warnings | 5.0 MiB | 0.75 s |
+| **native** | **1.82%** | **2.80%** | **0.966** | **0** | **31** | **92.2** | **0 errors, 0 warnings** | 5.1 MiB | 0.1 s |
+
+The scorer reads `40_ir/clean.json`, which the build stage does not change, so
+equal scores are expected. What the EPUB itself contains was checked by
+extracting the text of every chapter file in spine order from both EPUBs and
+diffing them: all 374 paragraphs and headings are identical. The one
+difference is a heading pandoc adds: it gives the material before the first
+heading (the scanned front matter) an `<h1>` with the book title. The native
+writer lists that part in the TOC under the book title but does not repeat the
+title in the text, since the title page already has it. Both EPUBs have 12
+chapter files and the same 12 TOC entries. The native file is slightly larger
+because it stores PNG images uncompressed in the zip (they are already
+compressed); pandoc deflates them again for a 2% saving.
+
 ## Quality flags vs ground truth
 
 To check that `report.html` points reviewers at the right pages, each page's

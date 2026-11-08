@@ -119,8 +119,11 @@ Each rule is a separate, unit-tested function `IR -> IR` that can be switched on
 
 ### 4.5 build
 
-- Render BookIR to Pandoc Markdown (or HTML for tables and footnotes where Markdown is lossy).
-- Run `pandoc` with EPUB 3 output, a metadata YAML file, a cover (user-supplied, or the first page image), the bundled CSS, and a TOC depth from config.
+- Write EPUB 3 directly from BookIR (`rebind.epub`, native writer since the M5 follow-up; §13): XHTML
+  chapters split at a heading level, `nav.xhtml` + `toc.ncx` to a TOC depth from config, OPF metadata,
+  a cover (user-supplied, or the first page image), the bundled CSS, EPUB 3 footnotes.
+- Optional backend (`build.backend = "pandoc"`): render BookIR to Pandoc Markdown and run `pandoc`
+  with EPUB 3 output and a metadata YAML file. Never used by the apps (GPL, §2).
 - Optional: run Calibre's `ebook-convert` to produce AZW3 (an extra, not bundled in the slim image).
 
 ### 4.6 validate and report
@@ -166,7 +169,7 @@ rebind run book.pdf [--profile novel] [--title ... --author ...] [--from cleanup
 rebind watch ./inbox --out ./outbox        # watch-folder mode for Docker
 rebind report jobs/<slug>                  # rebuild/open the HTML report
 rebind engines                             # list installed engines + devices
-rebind doctor                              # check libraries and external tools (pandoc; optional epubcheck, unpaper)
+rebind doctor                              # check libraries and external tools (all optional: epubcheck, unpaper, pandoc)
 rebind serve [--host ...] [--port ...]     # HTTP API + web UI (M6/M7)
 ```
 
@@ -174,7 +177,7 @@ rebind serve [--host ...] [--port ...]     # HTTP API + web UI (M6/M7)
 
 - Python 3.12, `uv` for env and deps, `typer` (CLI), `pydantic` v2, `rich` (progress output).
 - PDF and images in-process: `pypdfium2` (PDFium), Pillow, numpy (M5).
-- External tools: pandoc (required); epubcheck with a Java runtime and unpaper (optional).
+- External tools: none required. Optional: epubcheck with a Java runtime, unpaper, pandoc.
 - Docling (default engine). `wordfreq` for the dictionary checks.
 - Quality tooling: `ruff`, `pyright`, `pytest`, `pytest-cov`.
 - Server (M6): FastAPI, SQLite for the job queue and state.
@@ -211,7 +214,7 @@ rebind/
 
 ### Docker
 
-- `Dockerfile.cpu`: `python:3.12-slim` plus pandoc and a headless JRE with epubcheck (poppler and unpaper dropped in M5). Multi-arch (amd64 and arm64).
+- `Dockerfile.cpu`: `python:3.12-slim` plus a headless JRE with epubcheck (poppler and unpaper dropped in M5, pandoc after the native EPUB writer). Multi-arch (amd64 and arm64).
 - `Dockerfile.cuda`: NVIDIA CUDA runtime base, same tools.
 - `compose.yml`: one `rebind watch` service with `inbox/`, `outbox/`, `jobs/` and `models/` volumes, plus a GPU profile.
 - Publish to GHCR on tagged releases.
@@ -336,7 +339,8 @@ M5 decisions in §13).
   permissive license); keep unpaper as an optional backend for users who install it. This revisits
   the "no imaging dependency in the core" decision (§13).
 - pandoc: bundle the static binary in app builds only if a native EPUB writer is not simpler (open
-  question, §12). pandoc is GPL, so it cannot go in the iOS build either way.
+  question, §12). pandoc is GPL, so it cannot go in the iOS build either way. *Done after M5: native
+  EPUB writer, pandoc optional (§13).*
 - epubcheck becomes optional: run when Java + EPUBCheck are found, otherwise skip with a note in the
   report. App builds may bundle a trimmed `jlink` runtime later.
 - Publish to PyPI (`uvx rebind`, `pipx install rebind`) and add a Homebrew formula.
@@ -397,7 +401,7 @@ M5 decisions in §13).
   across platforms on Macs?
 - ~~unpaper replacement: can in-process preprocessing match unpaper's CER on the corpus?~~ Settled in M5 (§13).
 - ~~pandoc: bundle the binary, or write EPUB 3 directly from BookIR?~~ Settled in M5: write EPUB 3
-  directly, before M8 (§13).
+  directly, before M8 (§13). Implemented: the native writer is the default.
 - Python sidecar freezer: PyInstaller or Briefcase? Watch bundle size (torch alone is about 400 MB on
   macOS arm64) and signing/notarization of the bundled native libraries.
 - Windows ML runtime: CPU torch with an optional CUDA download (the CUDA build is about 2.5 GB), or
@@ -571,7 +575,8 @@ Decisions made while building, recorded so the plan stays the source of truth.
   chapter splitting, `nav.xhtml` with the TOC depth, OPF metadata, cover,
   EPUB 3 footnotes, tables and images, all validated with EPUBCheck and
   checked against the corpus. That is its own piece of work, so M5 keeps
-  pandoc as the one required external tool for CLI and Docker users.
+  pandoc as the one required external tool for CLI and Docker users. *(Done
+  right after M5: see "Native EPUB writer decisions" below.)*
 - **Licence check covers bundled native code.** `scripts/check_licenses.py`
   now lists permissive wheels that bundle copyleft native libraries
   (`opencv-python-headless`, pulled in by RapidOCR) as warnings, and `--app`
@@ -590,3 +595,49 @@ Decisions made while building, recorded so the plan stays the source of truth.
   `/usr/bin:/bin` on PATH up to the preprocess stage, and the full pipeline
   with only pandoc, EPUBCheck and Java on PATH (integration test, MPS for the
   corpus run).
+
+### Native EPUB writer decisions (after M5, before M8)
+
+- **EPUB 3 is written in-process (`rebind.epub`); pandoc is optional.** The
+  writer uses only the standard library (`zipfile`, `html.escape`, string
+  building) plus Pillow, already a core dependency, to read the cover's size
+  and to convert images that are not EPUB core media types to PNG. No new
+  dependency, so the desktop and iOS bundles can build EPUBs (§2).
+  `build.backend = "native"` is the default; `"pandoc"` keeps the old
+  Markdown path (`book.md`, `metadata.yaml`, pandoc ≥ 3) for comparison.
+  `tools.py` marks pandoc optional, so `rebind doctor` no longer requires any
+  external tool. Build stage version 3; the backend is part of its key.
+- **Same container layout as pandoc** (`EPUB/content.opf`, `nav.xhtml`,
+  `toc.ncx`, `text/chNNN.xhtml`, `styles/`, `media/`) and the same spine
+  (cover, title page, nav, chapters), so reader behaviour stays as it was.
+  `toc.ncx` is included for EPUB 2 readers; it was cheap. The TOC nests by
+  heading level and puts a skipped level (h1 → h3) under the nearest
+  shallower entry; if `toc_depth` leaves no entries, every chapter file is
+  listed instead (an empty `<ol>` is invalid).
+- **Deliberate differences from pandoc's output.** Material before the first
+  heading gets no synthetic `<h1>` with the book title (pandoc adds one; the
+  title page already shows it), but is listed in the TOC under the title.
+  Heading ids are `h1`…`hN`, not slugs. A footnote is an `<aside
+  epub:type="footnote">` at the end of the chapter that references it, with
+  a backlink, numbered 1…n through the book as pandoc does; a note whose
+  reference was never found stays in place as `div.footnote-text`, and a
+  reference to a dropped note keeps its marker as plain text. `dc:date` is
+  only written when `metadata.date` is set (pandoc used the build date as the
+  publication date) and is normalised to W3CDTF or a bare year, with a
+  warning otherwise. Accessibility metadata does not claim
+  `alternativeText`: scanned figures have no alt text. No Apple
+  display-options file. PNG/JPEG/GIF are stored in the zip, not deflated.
+  `SOURCE_DATE_EPOCH` fixes `dcterms:modified` and zip timestamps.
+- **Validation.** EPUBCheck 5.4.0 reports 0 errors and 0 warnings on the
+  corpus book and on a synthetic book that uses every feature (front matter,
+  lists, tables with captions, figures with and without captions, linked and
+  unlinked footnotes, extra CSS, cover, three split/TOC settings;
+  `tests/integration/test_epub_epubcheck.py`). The end-to-end integration
+  test now runs with only EPUBCheck and Java on PATH.
+- **Corpus.** CER 1.82%, paragraph F1 0.966, unchanged (the scorer reads
+  `40_ir/clean.json`); the chapter text extracted from the native EPUB is
+  identical to the pandoc EPUB's apart from the heading above
+  (docs/benchmarks.md). Building takes 0.1 s instead of 0.75 s.
+- **Not done:** page-list navigation and `epub:type="pagebreak"` markers from
+  the source page numbers (BookIR has them, so this is a natural follow-up),
+  and MathML.

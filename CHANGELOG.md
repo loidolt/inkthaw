@@ -14,9 +14,17 @@
 - EPUBCheck is optional: without it (or without a working Java runtime) the
   EPUB is still built and the report says validation was skipped.
   `validate.require_epubcheck = true` restores the old hard requirement.
-- `rebind doctor` lists the built-in libraries; only pandoc is a required
-  external tool. The Docker images no longer install poppler or unpaper.
-- The ingest, rasterize, preprocess and validate stage versions changed, so
+- The EPUB is written in-process by a native EPUB 3 writer (`rebind.epub`,
+  standard library + Pillow): chapters split at `build.split_level`,
+  `nav.xhtml` and `toc.ncx` honouring `build.toc_depth`, OPF metadata, cover
+  page, bundled and extra CSS, EPUB 3 pop-up footnotes, tables, figures and
+  front matter. pandoc is no longer required; `build.backend = "pandoc"` keeps
+  the old path for anyone who wants it. Note numbers are sequential through
+  the book, as with pandoc; the material before the first heading no longer
+  gets the book title as an extra heading (the title page carries it).
+- `rebind doctor` lists the built-in libraries; no external tool is required
+  any more. The Docker images no longer install poppler, unpaper or pandoc.
+- The ingest, rasterize, preprocess, build and validate stage versions changed, so
   existing jobs re-run from ingest once (OCR results stay cached per page
   image where the image is unchanged).
 

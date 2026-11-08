@@ -56,13 +56,13 @@ of the CPU image or of `pip install rebind`. `triton` (MIT) is also included.
 
 ## External command-line tools (invoked as separate processes, not linked)
 
-These are not Python dependencies. The Docker images ship pandoc, EPUBCheck
-and a JRE as separate programs alongside rebind (aggregation). None of them may
+These are not Python dependencies. The Docker images ship EPUBCheck and a JRE
+as separate programs alongside rebind (aggregation). None of them may
 go into the desktop or mobile app bundles if GPL (PLAN.md §2).
 
 | Tool | License | Status |
 |---|---|---|
-| pandoc | GPL-2.0-or-later | required: builds the EPUB |
+| pandoc | GPL-2.0-or-later | optional EPUB builder (`build.backend = "pandoc"`); the default native writer replaced it, not installed in the images |
 | EPUBCheck (5.x via Homebrew, 4.2.6 in the Debian/Ubuntu images) | BSD-3-Clause | optional: validates the EPUB; skipped with a note when missing |
 | OpenJDK runtime (for EPUBCheck) | GPL-2.0 with Classpath Exception | optional |
 | unpaper | GPL-2.0 | optional preprocess backend (`preprocess.backend = "unpaper"`); not installed in the images since M5 |

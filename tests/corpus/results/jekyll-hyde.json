@@ -422,5 +422,68 @@
    "output": 364,
    "ground_truth": 349
   }
+ },
+ {
+  "id": "jekyll-hyde",
+  "label": "native EPUB writer (build.backend = native, default)",
+  "date": "2026-11-08T22:20:26+00:00",
+  "rebind_version": "0.1.0",
+  "git_commit": "86a73be",
+  "engine": "docling",
+  "engine_version": "2.149.0",
+  "settings": {
+   "dpi": 300,
+   "preprocess": {
+    "raster_mode": "render",
+    "color": "gray",
+    "split_spreads": true,
+    "spread_min_aspect": 1.1,
+    "spread_order": "ltr",
+    "backend": "builtin",
+    "remove_borders": true,
+    "despeckle": 4,
+    "mask_content": true,
+    "soften": true,
+    "deskew": true,
+    "deskew_max_angle": 2.0,
+    "unpaper_args": [
+     "--no-grayfilter"
+    ],
+    "binarize": false,
+    "workers": null
+   },
+   "ocr": {
+    "languages": [],
+    "docling_ocr": "rapidocr",
+    "rapidocr_backend": "torch",
+    "rapidocr_params": {
+     "Det.box_thresh": 0.3
+    },
+    "tables": false,
+    "pictures": true
+   }
+  },
+  "scores": {
+   "cer": 0.0182,
+   "wer": 0.028,
+   "paragraph_precision": 0.9503,
+   "paragraph_recall": 0.9819,
+   "paragraph_f1": 0.9658,
+   "header_leaks": 0,
+   "hyp_chars": 136845,
+   "ref_chars": 138078
+  },
+  "quality_score": 92.2,
+  "flagged_pages": 31,
+  "paragraphs": {
+   "output": 361,
+   "ground_truth": 349
+  },
+  "epub": {
+   "backend": "native",
+   "bytes": 5345248,
+   "epubcheck_errors": 0,
+   "epubcheck_warnings": 0
+  }
  }
 ]

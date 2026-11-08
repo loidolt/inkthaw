@@ -42,14 +42,14 @@ jobs:
       REBIND_MODELS_DIR: ${{ github.workspace }}/.models
     steps:
       - uses: actions/checkout@v4
-      # pandoc builds the EPUB; EPUBCheck (+ Java) is optional but CI insists
-      # on it below. poppler and unpaper are deliberately not installed.
+      # EPUBCheck (+ Java) is optional but CI insists on it below. pandoc,
+      # poppler and unpaper are deliberately not installed.
       - name: External tools
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            pandoc epubcheck default-jre-headless
-          ! command -v pdftoppm && ! command -v unpaper
+            epubcheck default-jre-headless
+          ! command -v pdftoppm && ! command -v unpaper && ! command -v pandoc
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true

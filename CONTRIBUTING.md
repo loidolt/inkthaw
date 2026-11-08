@@ -6,7 +6,8 @@ that they keep the project freely licensable.
 
 ## Setup
 
-You need Python 3.12, [uv](https://docs.astral.sh/uv/) and pandoc ≥ 3.
+You need Python 3.12 and [uv](https://docs.astral.sh/uv/). EPUBCheck (with
+Java) and pandoc ≥ 3 are optional; tests that need them are skipped without them.
 EPUBCheck with a Java runtime is optional but recommended (CI runs it), and
 unpaper only matters if you work on the `unpaper` preprocess backend. PDF
 rendering and the default page clean-up are Python dependencies.

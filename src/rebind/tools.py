@@ -22,8 +22,9 @@ class Tool:
     install_hint: str
 
 
-# Only pandoc is required. PDF reading/rendering (PDFium) and page clean-up
-# (numpy + Pillow) run in-process since M5; the rest are optional extras.
+# No external tool is required. PDF reading/rendering (PDFium) and page clean-up
+# (numpy + Pillow) run in-process since M5, and the EPUB is written in-process
+# by rebind.epub; everything here is an optional extra.
 TOOLS: dict[str, Tool] = {
     t.name: t
     for t in [
@@ -31,8 +32,8 @@ TOOLS: dict[str, Tool] = {
             "pandoc",
             "pandoc",
             ("--version",),
-            True,
-            "build EPUB",
+            False,
+            "optional build backend (build.backend = 'pandoc')",
             "brew install pandoc | apt install pandoc (>= 3.0)",
         ),
         Tool(

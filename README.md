@@ -84,26 +84,27 @@ docker compose run --rm rebind run /data/inbox/book.pdf --out /data/outbox --job
 
 ## Requirements (without Docker)
 
-- Python 3.12 or newer. PDF rendering (PDFium, via `pypdfium2`) and page
-  clean-up (deskew, border removal, despeckle) run inside rebind, so poppler
-  and unpaper are no longer needed.
-- [pandoc](https://pandoc.org/) ≥ 3.0 to build the EPUB.
+- Python 3.12 or newer. That is all that is required: PDF rendering (PDFium,
+  via `pypdfium2`), page clean-up (deskew, border removal, despeckle) and the
+  EPUB 3 writer run inside rebind, so poppler, unpaper and pandoc are no longer
+  needed.
 - Optional: [EPUBCheck](https://www.w3.org/publishing/epubcheck/) and a Java
   runtime. When they are missing, the EPUB is still built and the report says
   that validation was skipped.
 - Optional: unpaper, as an alternative preprocess backend
-  (`preprocess.backend = "unpaper"`).
+  (`preprocess.backend = "unpaper"`), and [pandoc](https://pandoc.org/) ≥ 3.0
+  as an alternative EPUB builder (`build.backend = "pandoc"`).
 
-macOS (Homebrew):
+To validate EPUBs, on macOS (Homebrew):
 
 ```bash
-brew install pandoc epubcheck
+brew install epubcheck
 ```
 
 Debian / Ubuntu:
 
 ```bash
-sudo apt install pandoc epubcheck default-jre-headless
+sudo apt install epubcheck default-jre-headless
 ```
 
 On a Mac, run rebind natively rather than in Docker: Docling then uses the
@@ -168,7 +169,7 @@ jobs/<slug>/
   20_clean/            cleaned page images (deskewed, borders and specks removed)
   30_ir/raw.json       BookIR straight from the engine (+ per-page cache)
   40_ir/clean.json     BookIR after cleanup (+ changes.json)
-  50_build/            book.md, metadata.yaml, book.epub
+  50_build/            book.epub (+ book.md, metadata.yaml with build.backend = "pandoc")
   60_report/           report.json, report.html, epubcheck.json
 ```
 

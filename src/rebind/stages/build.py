@@ -1,4 +1,7 @@
-"""build: BookIR -> Pandoc Markdown -> EPUB 3."""
+"""build: BookIR -> EPUB 3.
+
+The default 'native' backend writes the EPUB directly (rebind.epub); the
+optional 'pandoc' backend renders Pandoc Markdown and calls pandoc."""
 
 from __future__ import annotations
 
@@ -11,7 +14,7 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
-from rebind import markdown, tools
+from rebind import epub, markdown, tools
 from rebind.config import Config
 from rebind.errors import RebindError
 from rebind.ir import BlockKind, BookIR
@@ -84,9 +87,37 @@ def _file_hash(path: Path | None) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:16]
 
 
+def _bundled_css() -> bytes:
+    return files("rebind.assets").joinpath("epub.css").read_bytes()
+
+
+def _css_sources(cfg: Config) -> list[tuple[str, bytes]]:
+    """(file name, content): the bundled stylesheet, then build.css if set."""
+    css = [("epub.css", _bundled_css())]
+    if cfg.build.css is not None:
+        if not cfg.build.css.is_file():
+            raise RebindError(f"build.css not found: {cfg.build.css}")
+        css.append(("extra.css", cfg.build.css.read_bytes()))
+    return css
+
+
+def _cover_source(ctx: StageContext) -> Path | None:
+    """metadata.cover, else the rendered first page when build.cover is on."""
+    cfg = ctx.cfg
+    if cfg.metadata.cover is not None:
+        if not cfg.metadata.cover.is_file():
+            raise RebindError(f"metadata.cover not found: {cfg.metadata.cover}")
+        return cfg.metadata.cover
+    if cfg.build.cover:
+        candidate = ctx.job.dir("rasterize") / "cover.png"
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 class BuildStage:
     name = "build"
-    version = "2"
+    version = "3"  # 3: native EPUB writer (pandoc optional)
     config_keys: tuple[str, ...] = ("metadata", "build")
     clean_dir = True
 
@@ -94,89 +125,48 @@ class BuildStage:
         cfg = ctx.cfg
         return ":".join(
             [
-                tools.version("pandoc") or "",
+                cfg.build.backend,
+                (tools.version("pandoc") or "") if cfg.build.backend == "pandoc" else "",
                 _file_hash(cfg.build.css),
                 _file_hash(cfg.metadata.cover),
-                hashlib.sha256(
-                    files("rebind.assets").joinpath("epub.css").read_bytes()
-                ).hexdigest()[:16],
+                hashlib.sha256(_bundled_css()).hexdigest()[:16],
             ]
         )
 
     def run(self, ctx: StageContext) -> dict[str, Any]:
         job, cfg = ctx.job, ctx.cfg
-        tools.require("pandoc")
-        _check_pandoc()
+        backend = cfg.build.backend
+        if backend == "pandoc":
+            tools.require("pandoc")
+            _check_pandoc()
         out = job.dir(self.name)
         ir = BookIR.load(job.clean_ir)
-
-        # Images referenced by blocks are copied next to the Markdown.
-        img_out = out / "images"
-        copied: dict[str, str] = {}
-
-        def image_href(rel: str) -> str:
-            if rel not in copied:
-                src = job.abs(rel)
-                img_out.mkdir(exist_ok=True)
-                dst = img_out / src.name
-                shutil.copyfile(src, dst)
-                copied[rel] = f"images/{dst.name}"
-            return copied[rel]
-
-        md = markdown.render(ir, image_href)
-        (out / "book.md").write_text(md, encoding="utf-8")
-
         meta = resolve_metadata(ir, cfg, _pdf_metadata(ctx), job.slug)
-        # JSON is valid YAML, and avoids any quoting surprises.
-        (out / "metadata.yaml").write_text(
-            json.dumps(meta, indent=1, ensure_ascii=False), encoding="utf-8"
-        )
+        css = _css_sources(cfg)
+        cover = _cover_source(ctx)
 
-        css_files = [out / "epub.css"]
-        (out / "epub.css").write_bytes(files("rebind.assets").joinpath("epub.css").read_bytes())
-        if cfg.build.css is not None:
-            if not cfg.build.css.is_file():
-                raise RebindError(f"build.css not found: {cfg.build.css}")
-            shutil.copyfile(cfg.build.css, out / "extra.css")
-            css_files.append(out / "extra.css")
-
-        cover: Path | None = None
-        if cfg.metadata.cover is not None:
-            if not cfg.metadata.cover.is_file():
-                raise RebindError(f"metadata.cover not found: {cfg.metadata.cover}")
-            cover = out / ("cover" + cfg.metadata.cover.suffix.lower())
-            shutil.copyfile(cfg.metadata.cover, cover)
-        elif cfg.build.cover:
-            candidate = job.dir("rasterize") / "cover.png"
-            if candidate.is_file():
-                cover = out / "cover.png"
-                shutil.copyfile(candidate, cover)
-
-        args: list[str | Path] = [
-            "pandoc",
-            "book.md",
-            "--from",
-            "markdown-smart",
-            "--to",
-            "epub3",
-            "--output",
-            "book.epub",
-            "--metadata-file",
-            "metadata.yaml",
-            "--toc",
-            f"--toc-depth={cfg.build.toc_depth}",
-            f"--split-level={cfg.build.split_level}",
-            "--resource-path",
-            ".",
-        ]
-        for css in css_files:
-            args += ["--css", css.name]
-        if cover is not None:
-            args += ["--epub-cover-image", cover.name]
-        proc = tools.run(args, cwd=out)
-        if proc.stderr.strip():
-            for line in proc.stderr.strip().splitlines()[:20]:
-                ctx.warn(f"pandoc: {line}")
+        if backend == "native":
+            res = epub.write_epub(
+                job.epub,
+                ir,
+                meta,
+                image_source=job.abs,
+                css=css,
+                cover=cover,
+                split_level=cfg.build.split_level,
+                toc_depth=cfg.build.toc_depth,
+            )
+            for w in res.warnings:
+                ctx.warn(w)
+            n_images = res.images
+            extra: dict[str, Any] = {
+                "chapters": res.chapters,
+                "footnotes": res.notes,
+                "toc_entries": res.nav_entries,
+            }
+        else:
+            n_images = _build_pandoc(ctx, ir, meta, css, cover)
+            extra = {}
 
         if cfg.build.azw3:
             if tools.which("ebook-convert"):
@@ -185,14 +175,82 @@ class BuildStage:
                 ctx.warn("build.azw3 requested but Calibre's ebook-convert is not installed")
 
         size_kib = job.epub.stat().st_size // 1024
-        ctx.info(f"{job.rel(job.epub)} ({size_kib} KiB), title: {meta['title']!r}")
+        ctx.info(f"{job.rel(job.epub)} ({size_kib} KiB, {backend}), title: {meta['title']!r}")
         return {
+            "backend": backend,
             "title": meta["title"],
             "authors": meta.get("author", []),
             "epub_bytes": job.epub.stat().st_size,
-            "images": len(copied),
+            "images": n_images,
             "cover": cover.name if cover else None,
+            **extra,
         }
+
+
+def _build_pandoc(
+    ctx: StageContext,
+    ir: BookIR,
+    meta: dict[str, Any],
+    css: list[tuple[str, bytes]],
+    cover_src: Path | None,
+) -> int:
+    """BookIR -> Pandoc Markdown -> EPUB 3 with the pandoc binary. Returns the
+    number of images."""
+    job, cfg = ctx.job, ctx.cfg
+    out = job.dir("build")
+
+    # Images referenced by blocks are copied next to the Markdown.
+    img_out = out / "images"
+    copied: dict[str, str] = {}
+
+    def image_href(rel: str) -> str:
+        if rel not in copied:
+            src = job.abs(rel)
+            img_out.mkdir(exist_ok=True)
+            dst = img_out / src.name
+            shutil.copyfile(src, dst)
+            copied[rel] = f"images/{dst.name}"
+        return copied[rel]
+
+    md = markdown.render(ir, image_href)
+    (out / "book.md").write_text(md, encoding="utf-8")
+    # JSON is valid YAML, and avoids any quoting surprises.
+    (out / "metadata.yaml").write_text(
+        json.dumps(meta, indent=1, ensure_ascii=False), encoding="utf-8"
+    )
+    for name, data in css:
+        (out / name).write_bytes(data)
+    cover: Path | None = None
+    if cover_src is not None:
+        cover = out / ("cover" + cover_src.suffix.lower())
+        shutil.copyfile(cover_src, cover)
+
+    args: list[str | Path] = [
+        "pandoc",
+        "book.md",
+        "--from",
+        "markdown-smart",
+        "--to",
+        "epub3",
+        "--output",
+        "book.epub",
+        "--metadata-file",
+        "metadata.yaml",
+        "--toc",
+        f"--toc-depth={cfg.build.toc_depth}",
+        f"--split-level={cfg.build.split_level}",
+        "--resource-path",
+        ".",
+    ]
+    for name, _ in css:
+        args += ["--css", name]
+    if cover is not None:
+        args += ["--epub-cover-image", cover.name]
+    proc = tools.run(args, cwd=out)
+    if proc.stderr.strip():
+        for line in proc.stderr.strip().splitlines()[:20]:
+            ctx.warn(f"pandoc: {line}")
+    return len(copied)
 
 
 STAGE = BuildStage()

@@ -110,6 +110,8 @@ Every rule has an on/off switch: `drop_furniture`, `reading_order`,
 
 ### `[build]`
 
+`backend` (`"native"`, the default, writes EPUB 3 directly from BookIR with no
+external tool; `"pandoc"` goes through Pandoc Markdown and needs pandoc ≥ 3),
 `toc_depth`, `split_level` (heading level that starts a new EPUB file), `css`
 (extra stylesheet applied after the bundled one), `cover` (use the first page
 when no cover image is given), `azw3` (also write AZW3; needs Calibre).

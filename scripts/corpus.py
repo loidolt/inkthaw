@@ -197,6 +197,12 @@ def score_book(book: dict[str, Any], job: Path, label: str | None) -> dict[str, 
         "quality_score": (report.get("quality") or {}).get("score"),
         "flagged_pages": (report.get("quality") or {}).get("flagged_pages"),
         "paragraphs": {"output": len(hyp), "ground_truth": len(ref)},
+        "epub": {
+            "backend": manifest["stages"].get("build", {}).get("info", {}).get("backend", "pandoc"),
+            "bytes": report.get("epub_bytes"),
+            "epubcheck_errors": (report.get("epubcheck") or {}).get("errors"),
+            "epubcheck_warnings": (report.get("epubcheck") or {}).get("warnings"),
+        },
     }
     return result
 

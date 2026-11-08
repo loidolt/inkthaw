@@ -138,6 +138,10 @@ class QualityConfig(_Section):
 
 
 class BuildConfig(_Section):
+    backend: Literal["native", "pandoc"] = "native"
+    """'native' writes EPUB 3 directly from BookIR (no external tool); 'pandoc'
+    goes through Pandoc Markdown and needs pandoc >= 3 on PATH (GPL, installed
+    separately)."""
     toc_depth: int = 2
     split_level: int = 1
     css: Path | None = None

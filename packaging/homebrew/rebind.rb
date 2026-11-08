@@ -18,8 +18,6 @@ class Rebind < Formula
   license "Apache-2.0"
 
   depends_on "python@3.12"
-  # Builds the EPUB (GPL; installed separately, never bundled).
-  depends_on "pandoc"
   # Optional: validates the EPUB. Without it the report notes that validation was skipped.
   depends_on "epubcheck" => :recommended
 

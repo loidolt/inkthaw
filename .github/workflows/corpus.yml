@@ -22,7 +22,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            pandoc epubcheck default-jre-headless
+            epubcheck default-jre-headless
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true

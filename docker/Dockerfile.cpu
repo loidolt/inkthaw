@@ -13,12 +13,12 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH=/opt/venv/bin:$PATH \
     UV_CACHE_DIR=/root/.cache/uv
 
-# External tools: pandoc (>= 3, Debian 13) builds the EPUB; EPUBCheck + JRE
-# validate it. PDF rendering (PDFium) and page clean-up run in-process, so
-# poppler and unpaper are no longer installed (M5).
+# External tools: EPUBCheck + JRE validate the EPUB. PDF rendering (PDFium),
+# page clean-up and the EPUB writer run in-process, so poppler, unpaper and
+# pandoc are no longer installed.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        pandoc epubcheck default-jre-headless \
+        epubcheck default-jre-headless \
         libglib2.0-0 libgomp1 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 

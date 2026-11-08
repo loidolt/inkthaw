@@ -319,6 +319,7 @@ def doctor() -> None:
     libs.add_row("PDFium", v["pdfium"], "")
     libs.add_row("Pillow", PIL.__version__, "page images")
     libs.add_row("numpy", numpy.__version__, "preprocess: borders, despeckle, deskew")
+    libs.add_row("rebind.epub", __version__, "write EPUB 3 (no pandoc needed)")
     console.print(libs)
 
     table = Table(title="external tools")
@@ -331,8 +332,7 @@ def doctor() -> None:
             status = "[green]ok[/]"
             ver = tools.version(t.name) or "?"
             if t.name == "pandoc" and ver.split(".")[0].isdigit() and int(ver.split(".")[0]) < 3:
-                status = "[red]too old (need >= 3.0)[/]"
-                missing_required.append(t.name)
+                status = "[yellow]too old for build.backend = 'pandoc' (need >= 3.0)[/]"
             elif t.name == "java" and not tools.java_works():
                 status = f"[yellow]not working (optional)[/] {hint}"
                 ver = ""

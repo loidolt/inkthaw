@@ -15,12 +15,12 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH=/opt/venv/bin:$PATH \
     UV_CACHE_DIR=/root/.cache/uv
 
-# Ubuntu 24.04 ships Python 3.12 and pandoc 3.1. No poppler or unpaper since
-# M5 (PDFium and the built-in preprocess backend run in-process).
+# Ubuntu 24.04 ships Python 3.12. No poppler, unpaper or pandoc: PDFium, the
+# built-in preprocess backend and the EPUB writer run in-process.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         python3.12 python3.12-venv \
-        pandoc epubcheck default-jre-headless \
+        epubcheck default-jre-headless \
         libglib2.0-0 libgomp1 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
