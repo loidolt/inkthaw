@@ -48,8 +48,8 @@ not go into the desktop or mobile app bundles as is (PLAN.md §2);
 ## CUDA image only
 
 The NVIDIA image is based on `nvidia/cuda` and installs PyTorch's CUDA wheels,
-which bring NVIDIA's CUDA runtime libraries (`nvidia-*` packages, e.g. cuBLAS,
-cuDNN). These are proprietary but redistributable under the
+which bring NVIDIA's CUDA runtime libraries (`nvidia-*`, `cuda-toolkit` and
+`cuda-bindings` packages, e.g. cuBLAS, cuDNN). These are proprietary but redistributable under the
 [NVIDIA CUDA EULA](https://docs.nvidia.com/cuda/eula/) and the NVIDIA
 Deep Learning Container license that covers the base image. They are not part
 of the CPU image or of `pip install inkthaw`. `triton` (MIT) is also included.

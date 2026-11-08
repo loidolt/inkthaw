@@ -70,7 +70,7 @@ authors = ["Jane Author"]
 On first start the model weights (about 700 MB) are downloaded into `./models`
 and reused afterwards. The container runs as UID/GID 1000 by default; set
 `INKTHAW_UID` / `INKTHAW_GID` to match the owner of these folders. For an NVIDIA
-GPU (needs the NVIDIA Container Toolkit):
+GPU (needs the NVIDIA Container Toolkit and a driver that supports CUDA 13.2):
 
 ```bash
 docker compose --profile gpu up -d inkthaw-gpu

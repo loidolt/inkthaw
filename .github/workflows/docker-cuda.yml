@@ -1,0 +1,39 @@
+name: CUDA image
+
+# The CUDA image is large, so it is only build-tested when its inputs change
+# (or on demand), not on every push.
+on:
+  push:
+    branches: [main]
+    paths:
+      - docker/Dockerfile.cuda
+      - uv.lock
+      - pyproject.toml
+  pull_request:
+    paths:
+      - docker/Dockerfile.cuda
+      - uv.lock
+      - pyproject.toml
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile.cuda
+          load: true
+          tags: inkthaw:cuda
+          cache-from: type=gha,scope=cuda
+          cache-to: type=gha,mode=max,scope=cuda
+      - name: Smoke test (no GPU on the runner; checks tools and the CUDA torch build)
+        run: |
+          docker run --rm inkthaw:cuda doctor
+          docker run --rm --entrypoint python inkthaw:cuda -c \
+            "import torch; print(torch.__version__, torch.version.cuda); assert torch.version.cuda"
