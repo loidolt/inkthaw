@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from rebind import quality, tools
-from rebind.errors import RebindError, StageError
+from rebind.errors import RebindError, StageError, ToolMissingError
 from rebind.ir import BookIR
 from rebind.pipeline import StageContext
 from rebind.report import write_html
@@ -45,9 +45,22 @@ def parse_epubcheck(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def run_epubcheck(epub: Path, out_json: Path) -> dict[str, Any]:
+def skipped(reason: str) -> dict[str, Any]:
+    """Report entry when EPUBCheck did not run."""
+    return {
+        "skipped": True,
+        "reason": reason,
+        "checker_version": None,
+        "errors": None,
+        "warnings": None,
+        "counts": {},
+        "messages": [],
+    }
+
+
+def run_epubcheck(cmd: list[str], epub: Path, out_json: Path) -> dict[str, Any]:
     proc = subprocess.run(
-        [*tools.require("epubcheck"), str(epub), "--json", str(out_json)],
+        [*cmd, str(epub), "--json", str(out_json)],
         capture_output=True,
         text=True,
         check=False,
@@ -61,13 +74,16 @@ def run_epubcheck(epub: Path, out_json: Path) -> dict[str, Any]:
 
 class ValidateStage:
     name = "validate"
-    version = "2"
+    version = "3"  # 3: EPUBCheck optional (skipped with a note when missing)
     config_keys: tuple[str, ...] = ("validate", "quality", "metadata")
     clean_dir = True
 
     def extra_key(self, ctx: StageContext) -> str:
         if not ctx.cfg.validate_.epubcheck:
             return "off"
+        cmd, _ = tools.epubcheck_status()
+        if cmd is None:
+            return "missing"
         return tools.version("epubcheck") or ""
 
     def run(self, ctx: StageContext) -> dict[str, Any]:
@@ -77,9 +93,20 @@ class ValidateStage:
         if not epub.is_file():
             raise RebindError(f"{epub} missing; re-run the build stage")
 
-        check: dict[str, Any] | None = None
-        if cfg.validate_.epubcheck:
-            check = run_epubcheck(epub, out / "epubcheck.json")
+        check: dict[str, Any]
+        cmd, missing = tools.epubcheck_status()
+        if not cfg.validate_.epubcheck:
+            check = skipped("turned off (validate.epubcheck = false)")
+        elif cmd is None:
+            if cfg.validate_.require_epubcheck:
+                raise ToolMissingError(
+                    f"{missing}; install it ({tools.TOOLS['epubcheck'].install_hint}) "
+                    "or set validate.require_epubcheck = false"
+                )
+            check = skipped(f"{missing}; the EPUB was not validated")
+            ctx.warn(f"epubcheck skipped: {missing}")
+        else:
+            check = run_epubcheck(cmd, epub, out / "epubcheck.json")
             ctx.info(f"epubcheck: {check['errors']} errors, {check['warnings']} warnings")
             for m in check["messages"]:
                 if m["severity"] in ("FATAL", "ERROR"):
@@ -113,13 +140,14 @@ class ValidateStage:
         html_path = write_html(job)
         ctx.info(f"report: {job.rel(html_path)}")
 
-        if check and check["errors"] and cfg.validate_.fail_on_error:
+        if check["errors"] and cfg.validate_.fail_on_error:
             raise StageError(
                 f"epubcheck found {check['errors']} error(s); see {job.rel(out / 'epubcheck.json')}"
             )
         return {
-            "epubcheck_errors": check["errors"] if check else None,
-            "epubcheck_warnings": check["warnings"] if check else None,
+            "epubcheck_errors": check["errors"],
+            "epubcheck_warnings": check["warnings"],
+            "epubcheck_skipped": bool(check.get("skipped")),
             "quality_score": q["score"],
             "flagged_pages": q["flagged_pages"],
         }

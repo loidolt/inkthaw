@@ -22,49 +22,11 @@ class Tool:
     install_hint: str
 
 
+# Only pandoc is required. PDF reading/rendering (PDFium) and page clean-up
+# (numpy + Pillow) run in-process since M5; the rest are optional extras.
 TOOLS: dict[str, Tool] = {
     t.name: t
     for t in [
-        Tool(
-            "pdfinfo",
-            "poppler",
-            ("-v",),
-            True,
-            "ingest: page count, sizes",
-            "brew install poppler | apt install poppler-utils",
-        ),
-        Tool(
-            "pdfimages",
-            "poppler",
-            ("-v",),
-            True,
-            "ingest: embedded image DPI",
-            "brew install poppler | apt install poppler-utils",
-        ),
-        Tool(
-            "pdftotext",
-            "poppler",
-            ("-v",),
-            True,
-            "ingest: text-layer detection",
-            "brew install poppler | apt install poppler-utils",
-        ),
-        Tool(
-            "pdftoppm",
-            "poppler",
-            ("-v",),
-            True,
-            "rasterize pages",
-            "brew install poppler | apt install poppler-utils",
-        ),
-        Tool(
-            "unpaper",
-            "unpaper",
-            ("--version",),
-            True,
-            "preprocess: deskew, borders",
-            "brew install unpaper | apt install unpaper",
-        ),
         Tool(
             "pandoc",
             "pandoc",
@@ -77,17 +39,25 @@ TOOLS: dict[str, Tool] = {
             "epubcheck",
             "epubcheck",
             ("--version",),
-            True,
-            "validate EPUB",
+            False,
+            "validate EPUB (skipped if missing)",
             "brew install epubcheck | apt install epubcheck (needs Java)",
         ),
         Tool(
             "java",
             "java",
             ("-version",),
-            True,
+            False,
             "runtime for epubcheck",
             "brew install openjdk | apt install default-jre-headless",
+        ),
+        Tool(
+            "unpaper",
+            "unpaper",
+            ("--version",),
+            False,
+            "optional preprocess backend",
+            "brew install unpaper | apt install unpaper",
         ),
         Tool(
             "ebook-convert",
@@ -137,6 +107,32 @@ def version(name: str) -> str | None:
     out = (proc.stdout or "") + "\n" + (proc.stderr or "")
     m = _VERSION_RE.search(out)
     return m.group(1) if m else "unknown"
+
+
+@cache
+def java_works() -> bool:
+    """True if `java -version` runs. macOS ships a /usr/bin/java stub that only
+    prints "Unable to locate a Java Runtime", so finding it on PATH is not enough."""
+    java = which("java")
+    if java is None:
+        return False
+    try:
+        proc = subprocess.run(
+            [java, "-version"], capture_output=True, text=True, timeout=30, check=False
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return proc.returncode == 0
+
+
+def epubcheck_status() -> tuple[list[str] | None, str]:
+    """(argv prefix, "") when EPUBCheck can run, else (None, reason)."""
+    cmd = command("epubcheck")
+    if cmd is None:
+        return None, "EPUBCheck not found on PATH"
+    if not java_works():
+        return None, "EPUBCheck found but no working Java runtime"
+    return cmd, ""
 
 
 def require(name: str) -> list[str]:

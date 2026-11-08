@@ -45,9 +45,14 @@ def render_html(job: Job, report: dict[str, Any], raw: BookIR) -> str:
     stats = [
         (f'<b class="{_score_class(score)}">{score}</b>', "quality score (0-100)"),
         (f"<b>{quality.get('flagged_pages', 0)} / {quality.get('pages', 0)}</b>", "pages flagged"),
-        (f"<b>{check.get('errors', '-')}</b>", "epubcheck errors"),
-        (f"<b>{check.get('warnings', '-')}</b>", "epubcheck warnings"),
     ]
+    if check.get("skipped"):
+        stats.append(("<b>skipped</b>", f"epubcheck: {check.get('reason', '')}"))
+    else:
+        stats += [
+            (f"<b>{check.get('errors', '-')}</b>", "epubcheck errors"),
+            (f"<b>{check.get('warnings', '-')}</b>", "epubcheck warnings"),
+        ]
     stats_html = "".join(f'<div class="stat">{v}<span>{_esc(k)}</span></div>' for v, k in stats)
 
     counts: dict[str, int] = quality.get("flag_counts", {})
