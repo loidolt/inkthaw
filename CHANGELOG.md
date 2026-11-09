@@ -56,6 +56,14 @@ M5: fewer external tools, plus fixes from a code review.
   demoted to paragraphs. A period-terminated heading stays a heading when it
   is short, has no other sentence punctuation and is followed by body prose;
   letter sign-offs ("HASTIE LANYON.") are still demoted.
+- Long file names no longer share a job: a slug cut to 60 characters now
+  ends in a short hash of the full name, so "... Volume 1" and "... Volume 2"
+  stay apart. **Slugs of very long file names change**, so such a book starts
+  a new job folder (and output name) once. A job folder that already holds a
+  different book (other file name and other content) is refused with a
+  message to pass `--slug`; in watch mode that file goes to `failed/` instead
+  of overwriting the other book's EPUB. An updated scan with the same file
+  name still re-ingests.
 
 he
 Release workflow failed on the CUDA image, so the release job and the `-cuda`

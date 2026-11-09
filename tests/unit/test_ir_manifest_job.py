@@ -67,6 +67,16 @@ def test_slugify(name: str, slug: str) -> None:
     assert slugify(name) == slug
 
 
+def test_slugify_truncated_names_stay_apart() -> None:
+    base = "The History of the Decline and Fall of the Roman Empire - Volume"
+    one, two = slugify(f"{base} 1"), slugify(f"{base} 2")
+    assert one != two
+    assert len(one) <= 60 and len(two) <= 60
+    assert one.startswith("the-history-of-the-decline-and-fall-of-the-roman")
+    assert one == slugify(f"{base} 1")  # stable
+    assert slugify("x" * 60) == "x" * 60  # fits: unchanged
+
+
 def test_job_paths(tmp_path: Path) -> None:
     job = Job(tmp_path / "book")
     assert job.slug == "book"

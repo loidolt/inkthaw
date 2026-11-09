@@ -87,3 +87,30 @@ def test_same_name_twice_does_not_clobber_done(dirs, fake_pipeline) -> None:
         (dirs["inbox"] / "book.pdf").write_bytes(b"%PDF")
         w.run(once=True)
     assert len(list((dirs["inbox"] / "done").glob("book*.pdf"))) == 2
+
+
+def test_second_book_with_same_slug_fails_instead_of_overwriting(
+    dirs, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from inkthaw import pipeline
+    from inkthaw.job import sha256_file, slugify
+    from inkthaw.manifest import Manifest
+
+    monkeypatch.setattr(pipeline, "_stages", lambda: [])
+    w = make_watcher(dirs)
+    # A job and EPUB left by another book whose name maps to the same slug.
+    slug = slugify("book")
+    first = dirs["inbox"].parent / "Book.pdf"
+    first.write_bytes(b"%PDF first book")
+    job = Job(dirs["jobs"] / slug)
+    job.root.mkdir(parents=True)
+    m = Manifest(slug=slug)
+    m.input_sha256, m.source_name = sha256_file(first), first.name
+    m.save(job.manifest_path)
+    (dirs["outbox"] / f"{slug}.epub").write_bytes(b"EPUB first")
+
+    (dirs["inbox"] / "book.pdf").write_bytes(b"%PDF another book")
+    w.run(once=True)
+    assert "belongs to another book" in (dirs["outbox"] / f"{slug}.error.txt").read_text()
+    assert (dirs["inbox"] / "failed" / "book.pdf").is_file()
+    assert (dirs["outbox"] / f"{slug}.epub").read_bytes() == b"EPUB first"
