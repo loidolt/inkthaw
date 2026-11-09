@@ -144,6 +144,30 @@ chapter files and the same 12 TOC entries. The native file is slightly larger
 because it stores PNG images uncompressed in the zip (they are already
 compressed); pandoc deflates them again for a 2% saving.
 
+## Review fixes (0.2.0)
+
+Nine fixes from a code review (CHANGELOG 0.2.0, PLAN.md §13 "Review fixes").
+The page-mask fix was measured on its own first, since it changes the page
+images Docling sees; the second run has all nine. Same book and settings as
+above (Docling 2.149.0, MPS), 2026-11-09. The rasterize and preprocess stages
+re-ran. The first run was in a fresh job folder (full OCR); the second reused
+its per-page OCR cache.
+
+| Run | CER | WER | Para F1 | Leaks | Flagged | Score |
+|---|---|---|---|---|---|---|
+| Baseline (M5 default, native writer) | 1.82% | 2.80% | 0.966 | 0 | 31 | 92.2 |
+| + mask keeps every run but small edge marks | 1.83% | 2.80% | 0.966 | 0 | 31 | 92.2 |
+| **+ all nine review fixes** | **1.83%** | **2.80%** | **0.966** | **0** | **31** | **92.2** |
+
+This book is a single column with no footnotes or detached headings, so the
+mask fix was expected to change little. The 0.01-point CER rise (about a
+quarter of one garbled line) is well inside the 0.05-point limit; whether it
+comes from the mask or from the fresh OCR run was not separated. The other fixes leave this book
+unchanged: all 11 chapter headings are the same (none ends in a period here),
+the letter sign-offs ("HASTIE LANYON.", "HENRY JEKYLL.") are still demoted,
+no page is wide, and no suspended hyphens occur. They need a second corpus
+book (two columns, footnotes, period-terminated titles) to be measured.
+
 ## Quality flags vs ground truth
 
 To check that `report.html` points reviewers at the right pages, each page's
