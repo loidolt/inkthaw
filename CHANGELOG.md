@@ -64,6 +64,11 @@ M5: fewer external tools, plus fixes from a code review.
   message to pass `--slug`; in watch mode that file goes to `failed/` instead
   of overwriting the other book's EPUB. An updated scan with the same file
   name still re-ingests.
+- A single landscape page (a rotated table, a fold-out) in a book of portrait
+  pages is no longer cut in half as a spread. Wide pages are split when they
+  are the majority of the document, or when they are about 1.6 times as wide
+  as the portrait pages and as tall; others are kept whole and reported
+  (`wide_kept` in the rasterize stage info, one warning naming the pages).
 
 he
 Release workflow failed on the CUDA image, so the release job and the `-cuda`
