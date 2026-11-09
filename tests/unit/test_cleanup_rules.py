@@ -255,6 +255,29 @@ def test_join_split_word_across_blocks() -> None:
     assert join_split_word("a good-", "nature man", "en", 2.0) == "a good-nature man"
 
 
+@pytest.mark.parametrize(
+    ("lang", "text"),
+    [
+        ("en", "in the nineteenth- and twentieth-century novel"),
+        ("en", "a two- or three-volume edition"),
+        ("en-GB", "pre- and post-war"),
+        ("de", "Ein- und Ausgang"),
+        ("fr", "les pré- et post-scriptum"),
+        ("la", "fore- and aft"),  # unknown language: English set
+    ],
+)
+def test_hyphenation_keeps_suspended_hyphens(lang: str, text: str) -> None:
+    cfg = Config.model_validate({"metadata": {"language": lang}})
+    out, changes = join_hyphenation(book([blk(K.PARAGRAPH, text, 0)]), cfg)
+    assert texts(out) == [text]
+    assert changes == []
+
+
+def test_join_split_word_falls_through_on_suspended_hyphen() -> None:
+    assert join_split_word("the nineteenth-", "and twentieth century", "en", 2.0) is None
+    assert join_split_word("reput-", "able man", "en", 2.0) == "reputable man"
+
+
 # -- paragraph merge --------------------------------------------------------
 
 

@@ -49,6 +49,9 @@ M5: fewer external tools, plus fixes from a code review.
   reports `failed_pages`.
 - After a paragraph was merged across a page break, the next paragraph on
   the new page was merged into it too whenever the text allowed.
+- Suspended hyphens are kept as printed: "nineteenth- and twentieth-century"
+  no longer becomes "nineteenth-and twentieth-century" (coordinating words
+  for en, de, fr, es, it and nl; other languages use the English set).
 
 he
 Release workflow failed on the CUDA image, so the release job and the `-cuda`
