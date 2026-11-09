@@ -1,3 +1,5 @@
+import pytest
+
 from inkthaw.config import Config
 from inkthaw.engines.docling_engine import classify
 from inkthaw.ir import Block, BlockKind, BookIR
@@ -122,6 +124,21 @@ def test_resolve_metadata_precedence() -> None:
 
     meta = resolve_metadata(_ir(), Config(), {}, "my-book")
     assert meta["title"] == "My Book"
+
+
+@pytest.mark.parametrize(
+    ("heading", "title"),
+    [
+        ("THE HOUND'S TALE", "The Hound's Tale"),
+        ("THE HOUND’S TALE", "The Hound’s Tale"),
+        ("TWENTIETH-CENTURY TALES", "Twentieth-Century Tales"),
+        ("The Hound's Tale of McAllister", "The Hound's Tale of McAllister"),
+        ("a quiet story", "a quiet story"),
+    ],
+)
+def test_resolve_metadata_heading_title_casing(heading: str, title: str) -> None:
+    ir = _ir(Block(id="h", kind=BlockKind.HEADING, level=1, text=heading, page=0))
+    assert resolve_metadata(ir, Config(), {}, "slug")["title"] == title
 
 
 def test_parse_epubcheck() -> None:

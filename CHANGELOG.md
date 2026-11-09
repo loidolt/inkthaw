@@ -69,6 +69,9 @@ M5: fewer external tools, plus fixes from a code review.
   are the majority of the document, or when they are about 1.6 times as wide
   as the portrait pages and as tall; others are kept whole and reported
   (`wide_kept` in the rasterize stage info, one warning naming the pages).
+- A title taken from the first heading keeps apostrophes inside words
+  ("THE HOUND'S TALE" becomes "The Hound's Tale", not "The Hound'S Tale"); a
+  heading that is not all capitals is used as printed.
 
 he
 Release workflow failed on the CUDA image, so the release job and the `-cuda`

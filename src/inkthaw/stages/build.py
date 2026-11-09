@@ -35,6 +35,22 @@ def _pdf_metadata(ctx: StageContext) -> dict[str, str]:
     return json.loads(info_path.read_text(encoding="utf-8")).get("pdf_metadata", {})
 
 
+_WORD = re.compile(r"[^\W_]+(?:['’][^\W_]+)*")
+
+
+def capitalize_words(text: str) -> str:
+    """Capitalise each word, keeping apostrophes inside the word: unlike
+    str.title(), "HOUND'S" becomes "Hound's", not "Hound'S"."""
+    return _WORD.sub(lambda m: m.group(0)[:1].upper() + m.group(0)[1:].lower(), text)
+
+
+def heading_title(text: str) -> str:
+    """A title from a heading: all-caps headings are capitalised word by word,
+    anything else is kept as printed."""
+    t = text.strip()
+    return capitalize_words(t) if t.isupper() else t
+
+
 def resolve_metadata(
     ir: BookIR, cfg: Config, pdf_meta: dict[str, str], slug: str
 ) -> dict[str, Any]:
@@ -47,9 +63,9 @@ def resolve_metadata(
             title = t
     if not title:
         first = next((b for b in ir.blocks if b.kind == BlockKind.HEADING and b.text.strip()), None)
-        title = first.text.strip().title() if first else None
+        title = heading_title(first.text) if first else None
     if not title:
-        title = slug.replace("-", " ").title()
+        title = capitalize_words(slug.replace("-", " "))
 
     authors = list(m.authors)
     if not authors and (a := (pdf_meta.get("Author") or "").strip()):
@@ -117,7 +133,7 @@ def _cover_source(ctx: StageContext) -> Path | None:
 
 class BuildStage:
     name = "build"
-    version = "3"  # 3: native EPUB writer (pandoc optional)
+    version = "4"  # 4: fallback title keeps apostrophes and mixed-case headings
     config_keys: tuple[str, ...] = ("metadata", "build")
     clean_dir = True
 
