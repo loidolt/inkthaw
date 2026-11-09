@@ -121,3 +121,61 @@ def test_soften_antialiases_hard_edges_only() -> None:
     assert out[5, 5] == 255 and out[30, 30] == 0  # flat areas unchanged
     edge = out[30, 18:22]
     assert ((edge > 0) & (edge < 255)).any()  # edge pixels now gray
+
+
+A4 = (2480, 3508)  # 300 dpi
+MM = 300 / 25.4
+
+
+def _words(draw: ImageDraw.ImageDraw, x0: int, x1: int, y0: int, y1: int, pitch: int = 42) -> None:
+    for y in range(y0, y1, pitch):
+        for x in range(x0, x1 - 24, 34):
+            draw.rectangle([x, y, x + 24, y + 16], fill=25)
+
+
+def _dark(img: Image.Image) -> int:
+    return int((np.array(img.convert("L")) < 128).sum())
+
+
+def _two_columns() -> Image.Image:
+    img = Image.new("L", A4, 245)
+    draw = ImageDraw.Draw(img)
+    gutter = round(8 * MM)
+    _words(draw, 300, 1200, 400, 3000)
+    _words(draw, 1200 + gutter, 2100 + gutter, 400, 3000)
+    return img
+
+
+def _footnote() -> Image.Image:
+    img = Image.new("L", A4, 245)
+    draw = ImageDraw.Draw(img)
+    _words(draw, 300, 2100, 400, 2600)
+    top = 2600 + round(12 * MM)
+    _words(draw, 300, 2100, top, top + 120, pitch=30)
+    return img
+
+
+def _heading() -> Image.Image:
+    img = Image.new("L", A4, 245)
+    draw = ImageDraw.Draw(img)
+    _words(draw, 900, 1500, 500, 520)  # one centred heading line
+    _words(draw, 300, 2100, 520 + round(15 * MM), 3000)
+    return img
+
+
+@pytest.mark.parametrize("make", [_two_columns, _footnote, _heading])
+def test_mask_keeps_text_set_apart_from_the_body(make) -> None:
+    page = make()
+    out, stats = pageclean.clean_image(page, 300, deskew=False, soften=False)
+    assert stats.content_box is not None
+    assert _dark(out) == _dark(page)
+
+
+def test_mask_drops_small_blob_near_the_page_edge() -> None:
+    page = np.array(_two_columns())
+    page[1500:1530, 40:70] = 0  # small dark blob in the left margin
+    page[3420:3440, 1200:1240] = 0  # and one near the bottom edge
+    out, stats = pageclean.clean_image(Image.fromarray(page), 300, deskew=False, soften=False)
+    assert stats.content_box is not None
+    assert stats.content_box[0] == 300 and stats.content_box[3] <= 3000
+    assert _dark(out) == _dark(_two_columns())
