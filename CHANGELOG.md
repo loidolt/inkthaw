@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased (M5: fewer external tools)
+## 0.2.0 (2026-11-09)
+
+M5: fewer external tools, plus fixes from a code review.
 
 ### Changed
 
@@ -37,16 +39,18 @@
   existing jobs re-run from ingest once (OCR results stay cached per page
   image where the image is unchanged).
 
-### Added
+### Fixed
 
-- Draft PyPI publishing job (`release.yml`, off until a trusted publisher is
-  configured) and a draft Homebrew formula in `packaging/homebrew/`.
-- `scripts/check_licenses.py --app` fails on wheels that bundle copyleft
-  native libraries (currently `opencv-python-headless`, via RapidOCR).
+- The page mask no longer erases real text: a second text column, a footnote
+  block or a heading set well apart from the body was whitened before OCR.
+  Only small marks near the page edge are masked now.
+- A page Docling fails on is no longer cached as an empty page; the next run
+  retries it (pages cached that way by 0.1.0 are retried too). The OCR stage
+  reports `failed_pages`.
 
-## 0.1.0 (2026-11-08)
-
-First release.
+he
+Release workflow failed on the CUDA image, so the release job and the `-cuda`
+image were skipped. 0.2.0 is the first published release.
 
 ### Pipeline
 

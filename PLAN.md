@@ -497,8 +497,8 @@ Decisions made while building, recorded so the plan stays the source of truth.
 - **Debian's EPUBCheck is 4.2.6** and is installed as a bare `.jar` symlink;
   tools that resolve to a `.jar` are run with `java -jar`. (Homebrew ships
   5.x; both validate EPUB 3.)
-- **CUDA image** swaps the lock file's CPU torch for the CUDA 12.8 build of
-  the same version. It was linted but not built or run here (no NVIDIA GPU on
+- **CUDA image** swaps the lock file's CPU torch for the CUDA 13.2 build of
+  the same version (`docker/Dockerfile.cuda`; torch 2.15 has no CUDA 12.8 build). It was linted but not built or run here (no NVIDIA GPU on
   the development machine); the release workflow builds it.
 - **Image size:** about 2.6 GB uncompressed for the CPU image, mostly torch
   (690 MB), transformers, scipy and the JRE.
@@ -519,7 +519,8 @@ Decisions made while building, recorded so the plan stays the source of truth.
   installed packages and inside the CPU image.
 - **Removed** the unused `ocr.page_batch` option.
 - **Release:** version 0.1.0, tag `v0.1.0`. Pushing the tag runs
-  `release.yml` (GHCR images and a GitHub release).
+  `release.yml` (GHCR images and a GitHub release). The v0.1.0 run failed on
+  the CUDA image, so no release was published; 0.2.0 is the first.
 
 ### M5 decisions
 
