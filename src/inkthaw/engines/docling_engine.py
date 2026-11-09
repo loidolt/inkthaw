@@ -246,11 +246,15 @@ class DoclingEngine:
                 warnings.simplefilter("ignore")
                 results = converter.convert_all(paths, raises_on_error=False)
                 for page, res in zip(todo, results, strict=True):
-                    entry = self._page_entry(page, res, img_dir, raw_dir, ctx)
-                    entry["key"] = keys[page.index]
-                    (cache_dir / f"p{page.index + 1:04d}.json").write_text(
-                        json.dumps(entry), encoding="utf-8"
+                    entry = self._error_entry(page, res, ctx) or self._page_entry(
+                        page, res, img_dir, raw_dir, ctx
                     )
+                    entry["key"] = keys[page.index]
+                    if "engine_error" not in entry["page_attrs"]:
+                        # A failed page is not cached, so the next run retries it.
+                        (cache_dir / f"p{page.index + 1:04d}.json").write_text(
+                            json.dumps(entry), encoding="utf-8"
+                        )
                     cached[page.index] = entry
                     ctx.advance()
 
@@ -277,12 +281,25 @@ class DoclingEngine:
             entry = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return None
-        return entry if entry.get("key") == key else None
+        if entry.get("key") != key:
+            return None
+        if "engine_error" in (entry.get("page_attrs") or {}):
+            return None  # written by an older version; retry the page
+        return entry
+
+    @staticmethod
+    def _error_entry(page: Page, res: Any, ctx: EngineContext) -> dict[str, Any] | None:
+        """The entry for a page Docling failed on, or None if it succeeded."""
+        status = getattr(res.status, "value", res.status)
+        if status in ("success", "partial_success"):
+            return None
+        errs = "; ".join(str(e.error_message) for e in (res.errors or []))
+        ctx.warn(f"page {page.index + 1}: docling status {status} {errs}")
+        return {"blocks": [], "confidence": None, "page_attrs": {"engine_error": errs}}
 
     def _page_entry(
         self, page: Page, res: Any, img_dir: Path, raw_dir: Path, ctx: EngineContext
     ) -> dict[str, Any]:
-        from docling.datamodel.base_models import ConversionStatus
         from docling_core.types.doc import (
             ContentLayer,
             ListItem,
@@ -290,12 +307,6 @@ class DoclingEngine:
             SectionHeaderItem,
             TableItem,
         )
-
-        status = res.status
-        if status not in (ConversionStatus.SUCCESS, ConversionStatus.PARTIAL_SUCCESS):
-            errs = "; ".join(str(e.error_message) for e in (res.errors or []))
-            ctx.warn(f"page {page.index + 1}: docling status {status.value} {errs}")
-            return {"blocks": [], "confidence": None, "page_attrs": {"engine_error": errs}}
 
         doc = res.document
         stem = f"p{page.index + 1:04d}"

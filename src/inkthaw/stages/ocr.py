@@ -36,12 +36,16 @@ class OcrStage:
         ir.save(job.raw_ir)
         confs = [p.confidence for p in ir.pages if p.confidence is not None]
         mean_conf = round(sum(confs) / len(confs), 4) if confs else None
+        failed = sum(1 for p in ir.pages if "engine_error" in p.attrs)
         ctx.info(f"{len(ir.blocks)} blocks from {len(ir.pages)} pages, mean confidence {mean_conf}")
+        if failed:
+            ctx.warn(f"{failed} page(s) failed in the OCR engine; they are retried on the next run")
         return {
             "engine": engine.name,
             "engine_version": engine.version,
             "blocks": len(ir.blocks),
             "mean_confidence": mean_conf,
+            "failed_pages": failed,
         }
 
 
