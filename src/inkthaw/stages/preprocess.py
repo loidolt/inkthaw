@@ -86,7 +86,7 @@ OPS: dict[str, PageOp] = {"builtin": op_builtin, "unpaper": op_unpaper, "none": 
 
 class PreprocessStage:
     name = "preprocess"
-    version = "2"  # 2: built-in backend (default) next to unpaper
+    version = "3"  # 3: mask keeps every run of ink but small edge marks
     config_keys: tuple[str, ...] = ("dpi", "preprocess")
     clean_dir = True
 

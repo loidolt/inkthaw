@@ -32,6 +32,10 @@ between running header and text, and between paragraphs)."""
 MASK_PAD_MM = 2.0
 MASK_MIN_INK = 0.002
 """A row/column counts as inked if at least this share of its pixels is dark."""
+MASK_EDGE_ZONE = 0.09
+"""Outer share of the page (per axis) where small runs of ink count as stray marks."""
+MASK_STRAY_MASS = 0.03
+"""A run of ink holding less than this share of the largest run's ink is small."""
 
 SOFTEN_SHIFT_PX = 0.25
 """Bicubic resample by this sub-pixel offset. Bitonal (MRC/JBIG2) scans render
@@ -62,7 +66,7 @@ class CleanStats:
     """Measured skew; the page was rotated by -skew_deg."""
     rotated: bool = False
     content_box: tuple[int, int, int, int] | None = None
-    """Detected text area (x0, y0, x1, y1) before centring, if masking ran."""
+    """Text area (x0, y0, x1, y1) kept and centred, before padding, if masking ran."""
 
     def as_dict(self) -> dict[str, float | int | bool]:
         d = asdict(self)
@@ -218,30 +222,54 @@ def estimate_skew(gray: Gray, dpi: int, max_angle: float, threshold: int | None 
     return round(fine, 2)
 
 
-def _main_run(profile: NDArray[np.float64], min_ink: float, gap: int) -> tuple[int, int] | None:
-    """The stretch of inked positions (gaps up to `gap` bridged) holding the most ink."""
+def _ink_runs(
+    profile: NDArray[np.float64], min_ink: float, gap: int
+) -> list[tuple[int, int, float]]:
+    """Stretches of inked positions (gaps up to `gap` bridged) as (start, end, ink mass),
+    end exclusive."""
     idx = np.nonzero(profile >= min_ink)[0]
     if len(idx) == 0:
-        return None
+        return []
     breaks = np.nonzero(np.diff(idx) > gap)[0]
     starts = np.concatenate(([idx[0]], idx[breaks + 1]))
     ends = np.concatenate((idx[breaks], [idx[-1]]))
-    mass = [float(profile[a : b + 1].sum()) for a, b in zip(starts, ends, strict=True)]
-    best = int(np.argmax(mass))
-    return int(starts[best]), int(ends[best]) + 1
+    return [
+        (int(a), int(b) + 1, float(profile[a : b + 1].sum()))
+        for a, b in zip(starts, ends, strict=True)
+    ]
+
+
+def _kept_span(profile: NDArray[np.float64], min_ink: float, gap: int) -> tuple[int, int] | None:
+    """From the first to the last run of ink that is not a stray mark.
+
+    A run is stray only when it is both small (under MASK_STRAY_MASS of the
+    largest run's ink) and lies wholly inside the edge zone (the outer
+    MASK_EDGE_ZONE of the page on this axis). Everything else is kept, so a
+    second text column, a footnote block or a heading set well apart from the
+    body survives (an earlier version kept only the single densest run)."""
+    runs = _ink_runs(profile, min_ink, gap)
+    if not runs:
+        return None
+    n = len(profile)
+    lo, hi = n * MASK_EDGE_ZONE, n * (1 - MASK_EDGE_ZONE)
+    biggest = max(m for _, _, m in runs)
+    kept = [
+        (a, b) for a, b, m in runs if not (m < biggest * MASK_STRAY_MASS and (b <= lo or a >= hi))
+    ]
+    return kept[0][0], kept[-1][1]
 
 
 def content_box(
     gray: Gray, dpi: int, threshold: int | None = None
 ) -> tuple[int, int, int, int] | None:
-    """Bounding box (x0, y0, x1, y1) of the page's main text area: the densest run
-    of inked columns and of inked rows. Stray marks far from it (edge shadows,
-    library stamps in the margin, signature marks) fall outside."""
+    """Bounding box (x0, y0, x1, y1) of the page's text: every run of inked columns
+    and of inked rows except small stray marks near the page edge (edge shadows,
+    library stamps in the margin, signature marks)."""
     t = dark_threshold(gray) if threshold is None else threshold
     ink = gray < t
     mm = dpi / 25.4
-    xs = _main_run(ink.mean(axis=0), MASK_MIN_INK, max(1, round(MASK_HGAP_MM * mm)))
-    ys = _main_run(ink.mean(axis=1), MASK_MIN_INK, max(1, round(MASK_VGAP_MM * mm)))
+    xs = _kept_span(ink.mean(axis=0), MASK_MIN_INK, max(1, round(MASK_HGAP_MM * mm)))
+    ys = _kept_span(ink.mean(axis=1), MASK_MIN_INK, max(1, round(MASK_VGAP_MM * mm)))
     if xs is None or ys is None:
         return None
     return xs[0], ys[0], xs[1], ys[1]

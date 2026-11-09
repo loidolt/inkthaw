@@ -11,7 +11,7 @@ Every stage writes its own folder inside `jobs/<slug>/`, so runs are
 resumable and every intermediate file can be inspected. See [PLAN.md](PLAN.md)
 for the design and roadmap.
 
-> **Status: 0.1.0, alpha.** Scan in, valid EPUB 3 out, with cleanup rules,
+> **Status: 0.2.0, alpha.** Scan in, valid EPUB 3 out, with cleanup rules,
 > a quality report that points at the pages worth checking, and a Docker
 > watch-folder service. See the [changelog](CHANGELOG.md) for what works and
 > what doesn't yet.

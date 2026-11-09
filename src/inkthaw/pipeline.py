@@ -20,7 +20,7 @@ from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn, T
 from inkthaw import __version__, pdf, tools
 from inkthaw.config import Config
 from inkthaw.errors import InkthawError, StageError
-from inkthaw.job import STAGE_DIRS, Job
+from inkthaw.job import STAGE_DIRS, Job, sha256_file
 from inkthaw.manifest import Manifest, now_iso
 
 T = TypeVar("T")
@@ -124,6 +124,22 @@ def stage_key(stage: Stage, ctx: StageContext, upstream: str) -> str:
     return h.hexdigest()[:20]
 
 
+def check_same_book(job: Job, manifest: Manifest, input_pdf: Path | None) -> None:
+    """Refuse to re-ingest a different book into an existing job folder.
+
+    An updated scan of the same file (same name, new content) is allowed; a
+    file with another name and other content means two books share the slug."""
+    old_hash, old_name = manifest.input_sha256, manifest.source_name
+    if input_pdf is None or not (old_hash and old_name) or input_pdf.name == old_name:
+        return
+    if not input_pdf.is_file() or sha256_file(input_pdf) == old_hash:
+        return
+    raise InkthawError(
+        f"Job folder {job.root} belongs to another book ({old_name}), not {input_pdf.name}. "
+        "Pass --slug to give this book its own job (in watch mode, rename the file)."
+    )
+
+
 def run_pipeline(
     job: Job,
     cfg: Config,
@@ -139,6 +155,7 @@ def run_pipeline(
 
     job.root.mkdir(parents=True, exist_ok=True)
     manifest = job.load_manifest()
+    check_same_book(job, manifest, input_pdf)
     manifest.inkthaw_version = __version__
     manifest.config = cfg.model_dump(mode="json", by_alias=True)
     manifest.tools = {name: tools.version(name) for name in tools.TOOLS}

@@ -485,5 +485,131 @@
    "epubcheck_errors": 0,
    "epubcheck_warnings": 0
   }
+ },
+ {
+  "id": "jekyll-hyde",
+  "label": "review fix 1: mask",
+  "date": "2026-11-09T22:07:13+00:00",
+  "inkthaw_version": "0.2.0",
+  "git_commit": "977766b",
+  "engine": "docling",
+  "engine_version": "2.149.0",
+  "settings": {
+   "dpi": 300,
+   "preprocess": {
+    "raster_mode": "render",
+    "color": "gray",
+    "split_spreads": true,
+    "spread_min_aspect": 1.1,
+    "spread_order": "ltr",
+    "backend": "builtin",
+    "remove_borders": true,
+    "despeckle": 4,
+    "mask_content": true,
+    "soften": true,
+    "deskew": true,
+    "deskew_max_angle": 2.0,
+    "unpaper_args": [
+     "--no-grayfilter"
+    ],
+    "binarize": false,
+    "workers": null
+   },
+   "ocr": {
+    "languages": [],
+    "docling_ocr": "rapidocr",
+    "rapidocr_backend": "torch",
+    "rapidocr_params": {
+     "Det.box_thresh": 0.3
+    },
+    "tables": false,
+    "pictures": true
+   }
+  },
+  "scores": {
+   "cer": 0.0183,
+   "wer": 0.028,
+   "paragraph_precision": 0.9451,
+   "paragraph_recall": 0.9879,
+   "paragraph_f1": 0.966,
+   "header_leaks": 0,
+   "hyp_chars": 136845,
+   "ref_chars": 138078
+  },
+  "quality_score": 92.2,
+  "flagged_pages": 31,
+  "paragraphs": {
+   "output": 365,
+   "ground_truth": 349
+  },
+  "epub": {
+   "backend": "native",
+   "bytes": 5999848,
+   "epubcheck_errors": 0,
+   "epubcheck_warnings": 0
+  }
+ },
+ {
+  "id": "jekyll-hyde",
+  "label": "review fixes",
+  "date": "2026-11-09T22:09:50+00:00",
+  "inkthaw_version": "0.2.0",
+  "git_commit": "099b313",
+  "engine": "docling",
+  "engine_version": "2.149.0",
+  "settings": {
+   "dpi": 300,
+   "preprocess": {
+    "raster_mode": "render",
+    "color": "gray",
+    "split_spreads": true,
+    "spread_min_aspect": 1.1,
+    "spread_order": "ltr",
+    "backend": "builtin",
+    "remove_borders": true,
+    "despeckle": 4,
+    "mask_content": true,
+    "soften": true,
+    "deskew": true,
+    "deskew_max_angle": 2.0,
+    "unpaper_args": [
+     "--no-grayfilter"
+    ],
+    "binarize": false,
+    "workers": null
+   },
+   "ocr": {
+    "languages": [],
+    "docling_ocr": "rapidocr",
+    "rapidocr_backend": "torch",
+    "rapidocr_params": {
+     "Det.box_thresh": 0.3
+    },
+    "tables": false,
+    "pictures": true
+   }
+  },
+  "scores": {
+   "cer": 0.0183,
+   "wer": 0.028,
+   "paragraph_precision": 0.9451,
+   "paragraph_recall": 0.9879,
+   "paragraph_f1": 0.966,
+   "header_leaks": 0,
+   "hyp_chars": 136845,
+   "ref_chars": 138078
+  },
+  "quality_score": 92.2,
+  "flagged_pages": 31,
+  "paragraphs": {
+   "output": 365,
+   "ground_truth": 349
+  },
+  "epub": {
+   "backend": "native",
+   "bytes": 5999848,
+   "epubcheck_errors": 0,
+   "epubcheck_warnings": 0
+  }
  }
 ]

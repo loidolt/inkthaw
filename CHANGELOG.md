@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased (M5: fewer external tools)
+## 0.2.0 (2026-11-09)
+
+M5: fewer external tools, plus fixes from a code review.
 
 ### Changed
 
@@ -37,16 +39,43 @@
   existing jobs re-run from ingest once (OCR results stay cached per page
   image where the image is unchanged).
 
-### Added
+### Fixed
 
-- Draft PyPI publishing job (`release.yml`, off until a trusted publisher is
-  configured) and a draft Homebrew formula in `packaging/homebrew/`.
-- `scripts/check_licenses.py --app` fails on wheels that bundle copyleft
-  native libraries (currently `opencv-python-headless`, via RapidOCR).
+- The page mask no longer erases real text: a second text column, a footnote
+  block or a heading set well apart from the body was whitened before OCR.
+  Only small marks near the page edge are masked now.
+- A page Docling fails on is no longer cached as an empty page; the next run
+  retries it (pages cached that way by 0.1.0 are retried too). The OCR stage
+  reports `failed_pages`.
+- After a paragraph was merged across a page break, the next paragraph on
+  the new page was merged into it too whenever the text allowed.
+- Suspended hyphens are kept as printed: "nineteenth- and twentieth-century"
+  no longer becomes "nineteenth-and twentieth-century" (coordinating words
+  for en, de, fr, es, it and nl; other languages use the English set).
+- Chapter titles set with a period ("THE CAREW MURDER CASE.") are no longer
+  demoted to paragraphs. A period-terminated heading stays a heading when it
+  is short, has no other sentence punctuation and is followed by body prose;
+  letter sign-offs ("HASTIE LANYON.") are still demoted.
+- Long file names no longer share a job: a slug cut to 60 characters now
+  ends in a short hash of the full name, so "... Volume 1" and "... Volume 2"
+  stay apart. **Slugs of very long file names change**, so such a book starts
+  a new job folder (and output name) once. A job folder that already holds a
+  different book (other file name and other content) is refused with a
+  message to pass `--slug`; in watch mode that file goes to `failed/` instead
+  of overwriting the other book's EPUB. An updated scan with the same file
+  name still re-ingests.
+- A single landscape page (a rotated table, a fold-out) in a book of portrait
+  pages is no longer cut in half as a spread. Wide pages are split when they
+  are the majority of the document, or when they are about 1.6 times as wide
+  as the portrait pages and as tall; others are kept whole and reported
+  (`wide_kept` in the rasterize stage info, one warning naming the pages).
+- A title taken from the first heading keeps apostrophes inside words
+  ("THE HOUND'S TALE" becomes "The Hound's Tale", not "The Hound'S Tale"); a
+  heading that is not all capitals is used as printed.
 
-## 0.1.0 (2026-11-08)
-
-First release.
+he
+Release workflow failed on the CUDA image, so the release job and the `-cuda`
+image were skipped. 0.2.0 is the first published release.
 
 ### Pipeline
 

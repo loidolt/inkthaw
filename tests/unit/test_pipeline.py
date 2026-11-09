@@ -9,7 +9,7 @@ from rich.console import Console
 from inkthaw import pipeline
 from inkthaw.config import Config
 from inkthaw.errors import InkthawError
-from inkthaw.job import STAGE_DIRS, Job
+from inkthaw.job import STAGE_DIRS, Job, sha256_file
 from inkthaw.manifest import Manifest
 
 
@@ -112,3 +112,37 @@ def test_failure_is_recorded_and_retried(tmp_path: Path, fake_stages: dict[str, 
 def test_unknown_stage_name(tmp_path: Path, fake_stages: dict[str, FakeStage]) -> None:
     with pytest.raises(InkthawError, match="Unknown stage"):
         _run(Job(tmp_path / "job"), Config(), from_stage="nope")
+
+
+def _ingested(tmp_path: Path, name: str, content: bytes) -> tuple[Job, Path]:
+    job = Job(tmp_path / "job")
+    job.root.mkdir()
+    pdf = tmp_path / name
+    pdf.write_bytes(content)
+    m = Manifest(slug="job")
+    m.input_sha256 = sha256_file(pdf)
+    m.source_name = name
+    m.save(job.manifest_path)
+    return job, pdf
+
+
+def test_refuses_a_different_book_in_the_same_job(
+    tmp_path: Path, fake_stages: dict[str, FakeStage]
+) -> None:
+    job, _ = _ingested(tmp_path, "Gibbon Volume 1.pdf", b"%PDF volume one")
+    other = tmp_path / "other" / "Gibbon Volume 2.pdf"
+    other.parent.mkdir()
+    other.write_bytes(b"%PDF volume two")
+    with pytest.raises(InkthawError, match="belongs to another book"):
+        pipeline.run_pipeline(job, Config(), input_pdf=other, console=Console(quiet=True))
+    assert fake_stages["ingest"].runs == 0
+    assert Manifest.load(job.manifest_path).source_name == "Gibbon Volume 1.pdf"
+
+
+def test_updated_scan_of_the_same_file_reingests(
+    tmp_path: Path, fake_stages: dict[str, FakeStage]
+) -> None:
+    job, pdf = _ingested(tmp_path, "book.pdf", b"%PDF first scan")
+    pdf.write_bytes(b"%PDF better scan")
+    pipeline.run_pipeline(job, Config(), input_pdf=pdf, console=Console(quiet=True))
+    assert fake_stages["ingest"].runs == 1

@@ -497,8 +497,8 @@ Decisions made while building, recorded so the plan stays the source of truth.
 - **Debian's EPUBCheck is 4.2.6** and is installed as a bare `.jar` symlink;
   tools that resolve to a `.jar` are run with `java -jar`. (Homebrew ships
   5.x; both validate EPUB 3.)
-- **CUDA image** swaps the lock file's CPU torch for the CUDA 12.8 build of
-  the same version. It was linted but not built or run here (no NVIDIA GPU on
+- **CUDA image** swaps the lock file's CPU torch for the CUDA 13.2 build of
+  the same version (`docker/Dockerfile.cuda`; torch 2.15 has no CUDA 12.8 build). It was linted but not built or run here (no NVIDIA GPU on
   the development machine); the release workflow builds it.
 - **Image size:** about 2.6 GB uncompressed for the CPU image, mostly torch
   (690 MB), transformers, scipy and the JRE.
@@ -519,7 +519,8 @@ Decisions made while building, recorded so the plan stays the source of truth.
   installed packages and inside the CPU image.
 - **Removed** the unused `ocr.page_batch` option.
 - **Release:** version 0.1.0, tag `v0.1.0`. Pushing the tag runs
-  `release.yml` (GHCR images and a GitHub release).
+  `release.yml` (GHCR images and a GitHub release). The v0.1.0 run failed on
+  the CUDA image, so no release was published; 0.2.0 is the first.
 
 ### M5 decisions
 
@@ -653,3 +654,46 @@ Decisions made while building, recorded so the plan stays the source of truth.
   already use the name. inkthaw had no conflicts on PyPI, Homebrew, npm,
   crates.io or GitHub and no web or brand hits when checked (2026-11-08);
   inkthaw.com is registered for the project.
+
+### Review fixes (0.2.0)
+
+A code review found nine bugs, each reproduced with a small script and fixed
+with a test that failed before the change.
+
+- **Page mask keeps every run of ink except stray edge marks.** `content_box`
+  kept only the densest run of inked columns and rows, so a second text
+  column, a footnote block or a heading set more than 5–10 mm from the body
+  was whitened before OCR (invisible in the report, since the text never
+  reached it). Now a run is dropped only when it holds under 3% of the largest
+  run's ink **and** lies wholly in the outer 9% of the page on that axis.
+- **Failed OCR pages are not cached.** An empty error entry used to be written
+  like a success and reused forever. Error entries already on disk count as
+  a miss, so old jobs retry too; `CACHE_VERSION` stays at 1 so good pages are
+  not re-OCR'd.
+- **0.1.0 stays as tagged.** Its Release workflow failed on the CUDA image, so
+  nothing was published; 0.2.0 is the first published release. Tagging and
+  pushing `v0.2.0` is a manual step.
+- **Paragraph merge** judges breaks against the last piece merged in, not the
+  merged block (which keeps the first page's number and box).
+- **Suspended hyphens** ("nineteenth- and") are kept when the next word is a
+  coordinating word from a small per-language set.
+- **Headings ending in a period** stay headings when short, free of other
+  sentence punctuation (periods after words of up to three letters, such as
+  "DR.", do not count) and followed by a paragraph of 80+ characters; they are
+  demoted after a letter's closing (previous block ends in a comma) or when no
+  prose follows. Tuned on one book: watch this on the next corpus book.
+- **Long slugs** end in 6 hex characters of the full name's SHA-1, and a job
+  folder holding another book (other name and other content) is refused
+  before anything is touched. An updated scan with the same name re-ingests.
+- **Spreads** are split when wide pages are the majority, or a wide page is
+  at least 1.6 times the median portrait width at a similar height. A
+  one-page document of wide pages still counts as spreads (nothing to compare
+  against).
+- **Fallback titles** capitalise all-caps headings word by word with
+  apostrophes inside words; other headings are used as printed.
+- Stage versions: rasterize 3, preprocess 3, cleanup 3, build 4.
+- **Corpus (Jekyll, 2026-11-09):** CER 1.83% (baseline 1.82%), WER 2.80%,
+  paragraph F1 0.966, 0 header leaks, 31 flagged pages, both after the mask
+  fix alone and with all nine. Jekyll has one column, no footnotes and no
+  period-terminated titles, so most fixes do not touch it; a second corpus
+  book is needed to measure them (docs/benchmarks.md).

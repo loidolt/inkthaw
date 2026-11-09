@@ -41,11 +41,20 @@ _TRANSLIT = str.maketrans(
 )
 
 
+SLUG_HASH_LEN = 6
+
+
 def slugify(name: str, max_len: int = 60) -> str:
+    """ASCII job name for a file name. A slug that has to be cut to max_len
+    ends in a short hash of the full name, so long names that differ only at
+    the end ("... - Volume 1" / "... - Volume 2") stay apart."""
     norm = unicodedata.normalize("NFKD", name.translate(_TRANSLIT))
     norm = norm.encode("ascii", "ignore").decode()
     slug = re.sub(r"[^a-zA-Z0-9]+", "-", norm).strip("-").lower()
-    return (slug[:max_len].rstrip("-")) or "book"
+    if len(slug) > max_len:
+        digest = hashlib.sha1(name.encode("utf-8")).hexdigest()[:SLUG_HASH_LEN]
+        slug = f"{slug[: max_len - SLUG_HASH_LEN - 1].rstrip('-')}-{digest}"
+    return slug or "book"
 
 
 def sha256_file(path: Path, chunk: int = 1 << 20) -> str:
