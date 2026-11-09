@@ -473,6 +473,57 @@ def test_chapters_promote_demote_merge_and_levels() -> None:
     assert {c.action for c in changes} >= {"promote", "demote", "merge", "edit"}
 
 
+def test_chapters_keep_period_title_followed_by_prose() -> None:
+    ir = book(
+        [
+            blk(K.PARAGRAPH, PROSE, 0, 0),
+            blk(K.HEADING, "THE CAREW MURDER CASE.", 1, 0, level=2),
+            blk(K.PARAGRAPH, PROSE, 1, 1),
+            blk(K.HEADING, "DR. LANYON'S NARRATIVE.", 2, 0, level=2),
+            blk(K.PARAGRAPH, PROSE, 2, 1),
+        ]
+    )
+    out, changes = structure_chapters(ir, Config())
+    heads = [b.text for b in out.blocks if b.kind == K.HEADING]
+    assert heads == ["THE CAREW MURDER CASE.", "DR. LANYON'S NARRATIVE."]
+    assert not [c for c in changes if c.action == "demote"]
+
+
+@pytest.mark.parametrize(
+    "after",
+    [
+        [],  # the letter ends the book
+        [blk(K.HEADING, "CHAPTER V", 3, 0, level=1)],
+        [blk(K.PARAGRAPH, "Short.", 3, 0)],
+    ],
+)
+def test_chapters_demote_period_signoff_not_followed_by_prose(after: list[Block]) -> None:
+    ir = book(
+        [
+            blk(K.PARAGRAPH, PROSE, 2, 0),
+            blk(K.HEADING, "HENRY JEKYLL.", 2, 1, level=2),
+            *after,
+        ]
+    )
+    out, _ = structure_chapters(ir, Config())
+    assert out.blocks[1].kind == K.PARAGRAPH
+    assert out.blocks[1].attrs.get("demoted_heading")
+
+
+def test_chapters_demote_period_heading_after_closing_or_with_sentences() -> None:
+    ir = book(
+        [
+            blk(K.PARAGRAPH, "I am, dear sir, your obedient servant,", 0, 0),
+            blk(K.HEADING, "HENRY JEKYLL.", 0, 1, level=2),
+            blk(K.PARAGRAPH, PROSE, 0, 2),
+            blk(K.HEADING, "He went home. Then he slept.", 1, 0, level=2),
+            blk(K.PARAGRAPH, PROSE, 1, 1),
+        ]
+    )
+    out, _ = structure_chapters(ir, Config())
+    assert [b.text for b in out.blocks if b.kind == K.HEADING] == []
+
+
 def test_chapters_title_page_run_merges_fully() -> None:
     ir = book(
         [

@@ -3,7 +3,10 @@
 1. Promote short "Chapter 4" / "CHAPTER IV." / "BOOK TWO" paragraphs to headings.
 2. Demote headings that are really prose the layout model over-labelled:
    letter salutations and sign-offs ('"Your friend,', 'HASTIE LANYON.'),
-   anything long or ending in , ; or a sentence period.
+   anything long or ending in , or ;. A heading ending in a period is kept
+   only when it is short, has no other sentence punctuation and is followed
+   by body prose ("THE CAREW MURDER CASE."); otherwise (a sign-off) it is
+   demoted.
 3. Merge runs of headings on one page (a title split over lines). When the
    run is followed by body text, its last heading stays separate: that is the
    chapter title under a book or part title.
@@ -23,6 +26,21 @@ MAX_HEADING_CHARS = 120
 _BARE_NUMBER = re.compile(r"^\s*([ivxlcdm]+|\d+)\.?\s*$", re.IGNORECASE)
 _QUOTE_START = tuple("\"'“‘«„(")
 CONNECTOR_MAX_WORDS = 3
+PERIOD_HEADING_MAX_CHARS = 60
+"""A heading ending in a period is kept only up to this length..."""
+BODY_PROSE_MIN_CHARS = 80
+"""...and only when the next block is a paragraph at least this long."""
+_SKIP_KINDS = frozenset(
+    {
+        BlockKind.FOOTNOTE,
+        BlockKind.CAPTION,
+        BlockKind.IMAGE,
+        BlockKind.PAGE_HEADER,
+        BlockKind.PAGE_FOOTER,
+        BlockKind.PAGE_NUMBER,
+    }
+)
+_INNER_STOP = re.compile(r"([^\W\d_]*)[.!?](?=\s)")
 
 
 def is_chapter_label(text: str) -> bool:
@@ -30,21 +48,61 @@ def is_chapter_label(text: str) -> bool:
 
 
 def looks_like_prose(text: str) -> bool:
+    """Text-only prose test. A trailing period depends on the neighbouring
+    blocks, so `_promote_and_demote` decides that case (see `ends_in_period`)."""
     t = text.strip()
     if is_chapter_label(t):
         return False
+    return len(t) > MAX_HEADING_CHARS or t.startswith(_QUOTE_START) or t.endswith((",", ";"))
+
+
+def ends_in_period(text: str) -> bool:
+    t = text.strip()
+    return t.endswith(".") and not t.endswith(("..", "…")) and not is_chapter_label(t)
+
+
+def _has_inner_sentence_punct(text: str) -> bool:
+    """A sentence stop or : ; inside the text. Periods after short words
+    (initials and abbreviations: "DR.", "MR.", "J.") do not count."""
+    inner = text.strip()[:-1]
+    if any(c in inner for c in ":;"):
+        return True
+    return any(m.group(0)[-1] != "." or len(m.group(1)) > 3 for m in _INNER_STOP.finditer(inner))
+
+
+def _neighbour(blocks: list[Block], i: int, step: int) -> Block | None:
+    j = i + step
+    while 0 <= j < len(blocks):
+        if blocks[j].kind not in _SKIP_KINDS:
+            return blocks[j]
+        j += step
+    return None
+
+
+def period_heading_is_title(blocks: list[Block], i: int) -> bool:
+    """Whether heading blocks[i], which ends in a period, is a real title.
+
+    Old books often set titles with a period ("THE CAREW MURDER CASE."); a
+    letter's sign-off ("HASTIE LANYON.") looks the same. A title is short, has
+    no other sentence punctuation, and body prose follows it; a sign-off comes
+    after the letter's closing ("Your friend,") or is not followed by prose."""
+    t = blocks[i].text.strip()
+    if len(t) > PERIOD_HEADING_MAX_CHARS or _has_inner_sentence_punct(t):
+        return False
+    prev, nxt = _neighbour(blocks, i, -1), _neighbour(blocks, i, 1)
+    if prev is not None and prev.text.rstrip().endswith(","):
+        return False
     return (
-        len(t) > MAX_HEADING_CHARS
-        or t.startswith(_QUOTE_START)
-        or t.endswith((",", ";"))
-        or (t.endswith(".") and not t.endswith(("..", "…")))
+        nxt is not None
+        and nxt.kind == BlockKind.PARAGRAPH
+        and len(nxt.text.strip()) >= BODY_PROSE_MIN_CHARS
     )
 
 
 def _promote_and_demote(blocks: list[Block], changes: list[Change]) -> list[Block]:
     top = min((b.level or 1 for b in blocks if b.kind == BlockKind.HEADING), default=1)
     out = []
-    for b in blocks:
+    for i, b in enumerate(blocks):
         if (
             b.kind in (BlockKind.PARAGRAPH, BlockKind.OTHER)
             and len(b.text) <= 80
@@ -58,7 +116,10 @@ def _promote_and_demote(blocks: list[Block], changes: list[Change]) -> list[Bloc
                 }
             )
             changes.append(Change("chapters", "promote", b.id, b.page, short(b.text, 40)))
-        elif b.kind == BlockKind.HEADING and looks_like_prose(b.text):
+        elif b.kind == BlockKind.HEADING and (
+            looks_like_prose(b.text)
+            or (ends_in_period(b.text) and not period_heading_is_title(blocks, i))
+        ):
             b = b.model_copy(
                 update={
                     "kind": BlockKind.PARAGRAPH,

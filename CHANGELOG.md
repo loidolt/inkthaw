@@ -52,6 +52,10 @@ M5: fewer external tools, plus fixes from a code review.
 - Suspended hyphens are kept as printed: "nineteenth- and twentieth-century"
   no longer becomes "nineteenth-and twentieth-century" (coordinating words
   for en, de, fr, es, it and nl; other languages use the English set).
+- Chapter titles set with a period ("THE CAREW MURDER CASE.") are no longer
+  demoted to paragraphs. A period-terminated heading stays a heading when it
+  is short, has no other sentence punctuation and is followed by body prose;
+  letter sign-offs ("HASTIE LANYON.") are still demoted.
 
 he
 Release workflow failed on the CUDA image, so the release job and the `-cuda`
