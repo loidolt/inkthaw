@@ -47,6 +47,8 @@ M5: fewer external tools, plus fixes from a code review.
 - A page Docling fails on is no longer cached as an empty page; the next run
   retries it (pages cached that way by 0.1.0 are retried too). The OCR stage
   reports `failed_pages`.
+- After a paragraph was merged across a page break, the next paragraph on
+  the new page was merged into it too whenever the text allowed.
 
 he
 Release workflow failed on the CUDA image, so the release job and the `-cuda`

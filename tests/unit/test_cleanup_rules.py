@@ -321,6 +321,55 @@ def test_merge_on_column_jump_same_page() -> None:
     assert texts(out) == ["column one runs into column two here."]
 
 
+def test_no_merge_with_next_paragraph_on_page_after_cross_page_merge() -> None:
+    ir = book(
+        [
+            blk(K.PARAGRAPH, "The sentence runs over the", 0, 0, bbox=(0, 1300, 900, 1400)),
+            blk(K.PARAGRAPH, "page and he wrote as follows:", 1, 0, bbox=(0, 100, 900, 150)),
+            blk(
+                K.PARAGRAPH,
+                "Dear Sir, a new paragraph on the same page.",
+                1,
+                1,
+                bbox=(0, 200, 900, 300),
+            ),
+        ]
+    )
+    out, changes = merge_paragraphs(ir, Config())
+    assert texts(out) == [
+        "The sentence runs over the page and he wrote as follows:",
+        "Dear Sir, a new paragraph on the same page.",
+    ]
+    assert len(changes) == 1
+
+
+def test_merge_paragraph_running_over_three_pages() -> None:
+    ir = book(
+        [
+            blk(K.PARAGRAPH, "It began on one", 0, 0, bbox=(0, 1300, 900, 1400)),
+            blk(K.PARAGRAPH, "page, filled the whole of the next", 1, 0, bbox=(0, 100, 900, 1400)),
+            blk(K.PARAGRAPH, "and ended on a third.", 2, 0, bbox=(0, 100, 900, 200)),
+        ]
+    )
+    out, _ = merge_paragraphs(ir, Config())
+    assert texts(out) == [
+        "It began on one page, filled the whole of the next and ended on a third."
+    ]
+    assert out.blocks[0].attrs["pages"] == [0, 1, 2]
+
+
+def test_merge_on_column_jump_after_cross_page_merge() -> None:
+    ir = book(
+        [
+            blk(K.PARAGRAPH, "It began on one", 0, 0, bbox=(0, 1300, 900, 1400)),
+            blk(K.PARAGRAPH, "page and runs down column one into", 1, 0, bbox=(0, 300, 400, 1400)),
+            blk(K.PARAGRAPH, "column two here.", 1, 1, bbox=(500, 100, 900, 300)),
+        ]
+    )
+    out, _ = merge_paragraphs(ir, Config())
+    assert texts(out) == ["It began on one page and runs down column one into column two here."]
+
+
 # -- footnotes --------------------------------------------------------------
 
 

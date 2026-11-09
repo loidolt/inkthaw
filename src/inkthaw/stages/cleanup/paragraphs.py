@@ -37,10 +37,15 @@ def merge_paragraphs(ir: BookIR, cfg: Config) -> tuple[BookIR, list[Change]]:
     out: list[Block] = []
     changes: list[Change] = []
     last: int | None = None  # index in `out` of the paragraph that may continue
+    # The last piece merged into (or starting) that paragraph. Breaks are judged
+    # against it: after a cross-page merge the merged block still carries the
+    # first page and bbox, so the next paragraph would look like it follows a
+    # page break.
+    tail: Block | None = None
     for b in ir.blocks:
-        if b.kind == BlockKind.PARAGRAPH and last is not None:
+        if b.kind == BlockKind.PARAGRAPH and last is not None and tail is not None:
             a = out[last]
-            if _is_break(a, b) and should_merge(a, b):
+            if _is_break(tail, b) and should_merge(a, b):
                 joined = join_split_word(a.text, b.text, lang, min_zipf)
                 text = joined if joined is not None else f"{a.text.rstrip()} {b.text.lstrip()}"
                 pages = sorted({*a.attrs.get("pages", [a.page]), b.page})
@@ -69,10 +74,11 @@ def merge_paragraphs(ir: BookIR, cfg: Config) -> tuple[BookIR, list[Change]]:
                         f"{short(a.text[-30:], 30)!r} + {short(b.text, 30)!r}",
                     )
                 )
+                tail = b
                 continue
         out.append(b)
         if b.kind == BlockKind.PARAGRAPH:
-            last = len(out) - 1
+            last, tail = len(out) - 1, b
         elif b.kind not in _TRANSPARENT:
             last = None
     return ir.model_copy(update={"blocks": out}), changes

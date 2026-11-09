@@ -60,7 +60,7 @@ def apply_rules(ir: BookIR, cfg: Config) -> tuple[BookIR, list[Change], list[str
 
 class CleanupStage:
     name = "cleanup"
-    version = "2"
+    version = "3"  # 3: review fixes (paragraph merge, suspended hyphens, headings)
     config_keys: tuple[str, ...] = ("cleanup", "metadata")
     clean_dir = True
 
